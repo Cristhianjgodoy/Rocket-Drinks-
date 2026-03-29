@@ -22,6 +22,29 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .lerr{color:var(--danger);font-size:13px;margin-top:10px;display:none;}
 .lrec{margin-top:14px;font-size:12px;color:var(--mu);cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
 .lrec:hover{color:var(--gold);}
+/* Recovery form */
+#recover-screen{display:none;position:fixed;inset:0;background:#0a0a0a;z-index:500;align-items:center;justify-content:center;padding:20px;}
+#recover-screen.open{display:flex;}
+.rcard{background:var(--card);border:1px solid var(--bdg);border-radius:18px;padding:28px 24px;width:100%;max-width:360px;}
+.rcard-title{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
+.rcard-sub{font-size:13px;color:var(--mu);margin-bottom:22px;line-height:1.5;}
+.rcard-label{font-size:11px;color:var(--mu);font-weight:600;margin-bottom:5px;display:block;}
+.rcard-inp{width:100%;padding:12px 13px;background:#1a1a1a;border:1px solid var(--bd);border-radius:9px;color:var(--tx);font-size:14px;outline:none;margin-bottom:12px;font-family:inherit;transition:border-color .2s;}
+.rcard-inp:focus{border-color:var(--gold);}
+.rcard-btn{width:100%;padding:13px;border-radius:9px;background:linear-gradient(135deg,var(--gold),var(--gold-l));color:#000;font-size:14px;font-weight:700;border:none;cursor:pointer;margin-top:4px;}
+.rcard-err{color:var(--danger);font-size:12px;margin-top:10px;display:none;}
+.rcard-ok{color:#2ecc71;font-size:13px;margin-top:10px;display:none;text-align:center;}
+.rcard-note{font-size:11px;color:var(--mu);margin-top:14px;text-align:center;line-height:1.5;}
+.rec-link-box{background:#111;border:1px solid var(--bdg);border-radius:10px;padding:12px 14px;margin:14px 0;word-break:break-all;font-size:11px;color:var(--mu);cursor:pointer;transition:border-color .2s;position:relative;}
+.rec-link-box:hover{border-color:var(--gold);}
+.rec-link-copy{position:absolute;top:8px;right:10px;font-size:10px;color:var(--gold);font-weight:700;}
+.rec-opts-list{display:flex;flex-direction:column;gap:8px;margin:14px 0;}
+.rec-opt-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(201,168,76,.06);border:1px solid var(--bdg);border-radius:10px;cursor:pointer;font-size:13px;color:var(--tx);text-decoration:none;transition:background .2s;}
+.rec-opt-btn:hover{background:rgba(201,168,76,.14);}
+.rec-opt-icon{font-size:18px;}
+.rec-opt-info{display:flex;flex-direction:column;gap:2px;}
+.rec-opt-label{font-weight:600;font-size:13px;}
+.rec-opt-val{font-size:11px;color:var(--mu);}
 /* MODAL */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;}
 .modal.open{display:flex;}
@@ -148,6 +171,19 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .eq-del:hover{color:var(--danger);}
 .add-eq-btn{width:100%;padding:12px;border-radius:10px;background:rgba(201,168,76,.07);border:1px dashed var(--bdg);color:var(--gold);font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;margin-top:4px;}
 .add-eq-btn:hover{background:rgba(201,168,76,.14);}
+.emoji-btn{font-size:28px;cursor:pointer;background:var(--card2);border:1px solid var(--bd);border-radius:10px;padding:8px 14px;line-height:1;transition:border-color .2s;}
+.emoji-btn:hover{border-color:var(--gold);}
+.emoji-panel{display:none;position:absolute;z-index:999;background:#1a1a1a;border:1px solid var(--bd);border-radius:14px;padding:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);width:280px;max-height:260px;overflow-y:auto;}
+.emoji-panel.open{display:block;}
+.emoji-panel-cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.emoji-panel-cat{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--bd);background:var(--bg);color:var(--mid);cursor:pointer;white-space:nowrap;}
+.emoji-panel-cat.active{background:var(--gold);color:#000;border-color:var(--gold);}
+.emoji-grid{display:flex;flex-wrap:wrap;gap:4px;}
+.emoji-opt{font-size:22px;cursor:pointer;padding:4px;border-radius:6px;line-height:1;transition:background .1s;}
+.emoji-opt:hover{background:rgba(255,255,255,.1);}
+.bar-model-top{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;position:relative;}
+.slide-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;line-height:1;}
+.slide-del:hover{background:var(--danger);}
 .eq-preview{background:var(--bg);border:1px solid var(--bdg);border-radius:10px;padding:12px 16px;margin-top:16px;}
 .eq-preview-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;}
 .eq-preview-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bd);font-size:13px;}
@@ -180,6 +216,13 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
     <div class="msub">Escolha como deseja receber as instruções de recuperação:</div>
     <div id="recopts"></div>
     <button class="mbtn-close" onclick="closeRec()">Fechar</button>
+  </div>
+</div>
+
+<!-- RECOVERY SCREEN (token URL) -->
+<div id="recover-screen">
+  <div class="rcard" id="recover-card">
+    <!-- content injected by JS -->
   </div>
 </div>
 
@@ -234,6 +277,12 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
         <div class="stitle" style="margin-top:4px;">💰 Preço por Pessoa</div>
         <div class="pricebox"><span class="ppre">R$</span>
           <input class="pinp" id="preco-bronze" type="number" step="0.50" min="1" oninput="dirty()"></div>
+        <div class="fg" style="margin-top:10px;">
+          <label class="fl" style="color:var(--mu);">💰 Preço por Pessoa <span style="background:rgba(201,168,76,.15);color:var(--gold);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">Menos de 100 convidados</span></label>
+          <div class="pricebox"><span class="ppre">R$</span>
+            <input class="pinp" id="preco-menos100-bronze" type="number" step="0.50" min="1" oninput="dirty()" placeholder="—"></div>
+          <div style="font-size:10px;color:var(--mu);margin-top:4px;">Se em branco, usa o preço padrão acima para todos os eventos.</div>
+        </div>
         <div class="dv"></div>
         <div class="stitle">📝 Informações do Plano</div>
         <div class="fg"><label class="fl">Nome do Plano</label>
@@ -251,6 +300,12 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
         <div class="stitle" style="margin-top:4px;">💰 Preço por Pessoa</div>
         <div class="pricebox"><span class="ppre">R$</span>
           <input class="pinp" id="preco-silver" type="number" step="0.50" min="1" oninput="dirty()"></div>
+        <div class="fg" style="margin-top:10px;">
+          <label class="fl" style="color:var(--mu);">💰 Preço por Pessoa <span style="background:rgba(201,168,76,.15);color:var(--gold);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">Menos de 100 convidados</span></label>
+          <div class="pricebox"><span class="ppre">R$</span>
+            <input class="pinp" id="preco-menos100-silver" type="number" step="0.50" min="1" oninput="dirty()" placeholder="—"></div>
+          <div style="font-size:10px;color:var(--mu);margin-top:4px;">Se em branco, usa o preço padrão acima para todos os eventos.</div>
+        </div>
         <div class="dv"></div>
         <div class="stitle">📝 Informações do Plano</div>
         <div class="fg"><label class="fl">Nome do Plano</label>
@@ -268,6 +323,12 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
         <div class="stitle" style="margin-top:4px;">💰 Preço por Pessoa</div>
         <div class="pricebox"><span class="ppre">R$</span>
           <input class="pinp" id="preco-gold" type="number" step="0.50" min="1" oninput="dirty()"></div>
+        <div class="fg" style="margin-top:10px;">
+          <label class="fl" style="color:var(--mu);">💰 Preço por Pessoa <span style="background:rgba(201,168,76,.15);color:var(--gold);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">Menos de 100 convidados</span></label>
+          <div class="pricebox"><span class="ppre">R$</span>
+            <input class="pinp" id="preco-menos100-gold" type="number" step="0.50" min="1" oninput="dirty()" placeholder="—"></div>
+          <div style="font-size:10px;color:var(--mu);margin-top:4px;">Se em branco, usa o preço padrão acima para todos os eventos.</div>
+        </div>
         <div class="dv"></div>
         <div class="stitle">📝 Informações do Plano</div>
         <div class="fg"><label class="fl">Nome do Plano</label>
@@ -293,11 +354,13 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
       <div class="stitle">🖼️ Fotos do Carrossel de Bares</div>
       <div class="ibox">Clique em cada foto para substituí-la. As imagens são exibidas no carrossel da etapa de seleção de bar.</div>
       <div class="slides-grid" id="slides-grid"></div>
+      <button class="add-eq-btn" style="margin-top:8px;" onclick="addSlide()">+ Adicionar Foto de Bar</button>
 
       <div class="dv"></div>
       <div class="stitle">🍸 Modelos de Bar Disponíveis</div>
       <div class="ibox">Esses modelos aparecem quando o cliente clica em <strong>"Desejo selecionar"</strong>.</div>
       <div id="bar-models-list"></div>
+      <button class="add-eq-btn" style="margin-top:8px;" onclick="addBarModel()">+ Adicionar Modelo de Bar</button>
 
       <div class="dv"></div>
       <div class="stitle">⚠️ Mensagem de Aviso (estrutura de bar)</div>
@@ -361,11 +424,11 @@ const AK = 'rocketAdminSession';
 const DEF = {
   empresa:'Rocket Drinks', fundador:'Larissa Vitória Schmitt', whatsapp:'5551996753692',
   planos:{
-    bronze:{ preco_por_pessoa:22, nome:'Plano Caipirinhas', desc:'Uma opção prática e acessível.',
+    bronze:{ preco_por_pessoa:22, preco_menos100:28, nome:'Plano Caipirinhas', desc:'Uma opção prática e acessível.',
              features:['Até 6 sabores de caipirinhas','05h de serviço','Equipe por faixa de convidados','Copos de vidro, utensílios e insumos de bar','Vodka, Saquê e Cachaça'] },
-    silver:{ preco_por_pessoa:28, nome:'Plano Rocket', desc:'Completo, variado e equilibrado.',
+    silver:{ preco_por_pessoa:28, preco_menos100:34, nome:'Plano Rocket', desc:'Completo, variado e equilibrado.',
              features:['6 opções de drinks + 2 caipirinhas','05h de serviço','Equipe por faixa de convidados','Copos de vidro, utensílios e insumos de bar','Destilados nacionais'] },
-    gold:{ preco_por_pessoa:38, nome:'Plano Gold', desc:'Exclusividade premium para impressionar seus convidados.',
+    gold:{ preco_por_pessoa:38, preco_menos100:44, nome:'Plano Gold', desc:'Exclusividade premium para impressionar seus convidados.',
            features:['6 opções de drinks + 2 caipirinhas','05h de serviço','Equipe por faixa de convidados','Copos de vidro, utensílios e insumos de bar','Destilados importados'] },
   },
   grupos:{
@@ -475,25 +538,126 @@ function maskContact(val){
   const d=val.replace(/\D/g,'');
   return '+'+d.slice(0,4)+' *****'+d.slice(-4);
 }
+// ── RECOVERY FLOW ──────────────────────────────────────────────
+const REC_KEY = 'rocketRecovery';
+
+function _genRecoveryLink(){
+  const token = btoa(Date.now()+'_'+Math.random().toString(36).slice(2));
+  localStorage.setItem(REC_KEY, JSON.stringify({token, expires: Date.now()+30*60*1000}));
+  const base = window.location.href.split('?')[0];
+  return base + '?recover=' + encodeURIComponent(token);
+}
+
 function openRec(){
-  const c=getCreds(),con=document.getElementById('recopts');
-  con.innerHTML='';
+  const c = getCreds();
+  const link = _genRecoveryLink();
+  const msgWpp = encodeURIComponent(
+    '🔑 *Recuperação de Acesso – Rocket Drinks*\n\nAcesse o link abaixo para redefinir login/senha:\n' + link + '\n\n_Válido por 30 minutos._');
+  const subEmail = encodeURIComponent('Recuperação de Acesso – Rocket Drinks');
+  const bodyEmail = encodeURIComponent(
+    'Olá,\n\nAcesse o link abaixo para recuperar o acesso ao painel Rocket Drinks:\n\n' + link + '\n\nEste link é válido por 30 minutos.\n\nRocket Drinks');
+
+  function maskC(v){
+    if(!v)return'';
+    if(v.includes('@')){const[l,d]=v.split('@');return(l[0]||'')+'***@'+d;}
+    const d=v.replace(/\D/g,'');return'+'+d.slice(0,4)+' *****'+d.slice(-4);
+  }
+
   const opts=[];
-  if(c.recEmail1){const m=encodeURIComponent('Olá, preciso recuperar o acesso ao painel admin Rocket Drinks. Pode me enviar a senha?');
-    opts.push({icon:'📧',label:'E-mail',val:maskContact(c.recEmail1),href:`mailto:${c.recEmail1}?subject=Recupera%C3%A7%C3%A3o%20de%20Senha%20Rocket%20Drinks&body=${m}`});}
-  if(c.recEmail2){const m=encodeURIComponent('Olá, preciso recuperar o acesso ao painel admin Rocket Drinks. Pode me enviar a senha?');
-    opts.push({icon:'📧',label:'E-mail alternativo',val:maskContact(c.recEmail2),href:`mailto:${c.recEmail2}?subject=Recupera%C3%A7%C3%A3o%20de%20Senha%20Rocket%20Drinks&body=${m}`});}
-  if(c.recWhatsapp){const m=encodeURIComponent('Olá! Preciso recuperar minha senha do painel admin Rocket Drinks. Pode me ajudar?');
-    opts.push({icon:'💬',label:'WhatsApp',val:maskContact(c.recWhatsapp),href:`https://wa.me/${c.recWhatsapp}?text=${m}`});}
-  if(!opts.length){con.innerHTML='<div class="norec">Nenhum contato configurado.<br>Acesse Segurança no painel para cadastrar.</div>';}
-  else opts.forEach(o=>{
-    const a=document.createElement('a');a.className='ropt';a.href=o.href;a.target='_blank';
-    a.innerHTML=`<span class="ri">${o.icon}</span><div><div class="rl">${o.label}</div><div class="rv">${o.val}</div></div>`;
-    con.appendChild(a);
-  });
+  if(c.recEmail1) opts.push({icon:'📧',label:'E-mail principal',val:maskC(c.recEmail1),href:`mailto:${c.recEmail1}?subject=${subEmail}&body=${bodyEmail}`});
+  if(c.recEmail2) opts.push({icon:'📧',label:'E-mail alternativo',val:maskC(c.recEmail2),href:`mailto:${c.recEmail2}?subject=${subEmail}&body=${bodyEmail}`});
+  if(c.recWhatsapp){const n=c.recWhatsapp.replace(/\D/g,'');opts.push({icon:'💬',label:'WhatsApp',val:maskC(c.recWhatsapp),href:`https://wa.me/${n}?text=${msgWpp}`});}
+
+  const con = document.getElementById('recopts');
+  con.innerHTML='';
+  if(!opts.length){
+    con.innerHTML='<div class="norec">Nenhum contato configurado.<br>Acesse Segurança no painel para cadastrar.</div>';
+  } else {
+    // Show only send options — link is embedded in href, not shown on screen
+    const intro=document.createElement('div');
+    intro.style.cssText='font-size:12px;color:var(--mu);margin-bottom:12px;line-height:1.6;';
+    intro.textContent='Escolha como receber o link de recuperação. Ele será enviado diretamente pelo canal escolhido.';
+    con.appendChild(intro);
+    opts.forEach(o=>{
+      const a=document.createElement('a');a.className='rec-opt-btn';a.href=o.href;a.target='_blank';
+      a.innerHTML=`<span class="rec-opt-icon">${o.icon}</span><div class="rec-opt-info"><div class="rec-opt-label">${o.label}</div><div class="rec-opt-val">${o.val}</div></div><span style="margin-left:auto;font-size:12px;color:var(--gold);">Enviar →</span>`;
+      con.appendChild(a);
+    });
+    const note=document.createElement('div');
+    note.style.cssText='font-size:11px;color:var(--mu);margin-top:12px;text-align:center;';
+    note.textContent='⏱ Link válido por 30 minutos após o envio.';
+    con.appendChild(note);
+  }
   document.getElementById('recmodal').classList.add('open');
 }
+
+function copyRecLink(el, link){
+  navigator.clipboard.writeText(link).catch(()=>{});
+  const copied=document.getElementById('rec-link-copied');
+  if(copied){copied.textContent='✅ Copiado!';setTimeout(()=>{copied.textContent='📋 Copiar';},2000);}
+}
+
 function closeRec(){document.getElementById('recmodal').classList.remove('open');}
+
+// ── RECOVERY TOKEN CHECK (URL param) ────────────────────────────────────
+function checkRecoveryUrl(){
+  const params=new URLSearchParams(window.location.search);
+  const token=params.get('recover');
+  if(!token)return false;
+  try{
+    const stored=JSON.parse(localStorage.getItem(REC_KEY));
+    if(stored && stored.token===decodeURIComponent(token) && stored.expires>Date.now()){
+      _showRecoverForm();
+      return true;
+    }
+  }catch(e){}
+  // Invalid/expired token — show error on login
+  document.getElementById('lerr').textContent='Link de recuperação inválido ou expirado.';
+  document.getElementById('lerr').style.display='block';
+  return false;
+}
+
+function _showRecoverForm(){
+  const screen=document.getElementById('recover-screen');
+  const card=document.getElementById('recover-card');
+  card.innerHTML=`
+    <div class="rcard-title">🔑 Recuperação de Acesso</div>
+    <div class="rcard-sub">Redefina seu usuário e senha. Deixe em branco para manter o atual.</div>
+    <label class="rcard-label">Novo usuário</label>
+    <input class="rcard-inp" id="rnew-user" type="text" placeholder="Deixe em branco para manter" autocomplete="off">
+    <label class="rcard-label">Nova senha</label>
+    <input class="rcard-inp" id="rnew-pass" type="password" placeholder="Nova senha (mín. 4 caracteres)" autocomplete="new-password">
+    <label class="rcard-label">Confirmar nova senha</label>
+    <input class="rcard-inp" id="rnew-conf" type="password" placeholder="Repita a nova senha">
+    <button class="rcard-btn" onclick="saveRecovery()">✅ Salvar e Entrar</button>
+    <div class="rcard-err" id="rec-form-err"></div>
+    <div class="rcard-ok"  id="rec-form-ok"></div>
+    <div class="rcard-note">O link de recuperação é de uso único e expira após 30 minutos.</div>`;
+  screen.classList.add('open');
+  document.getElementById('ls').style.display='none';
+}
+
+function saveRecovery(){
+  const nu=document.getElementById('rnew-user').value.trim();
+  const np=document.getElementById('rnew-pass').value;
+  const nc=document.getElementById('rnew-conf').value;
+  const errEl=document.getElementById('rec-form-err');
+  const okEl=document.getElementById('rec-form-ok');
+  errEl.style.display='none'; okEl.style.display='none';
+  if(np && np!==nc){errEl.textContent='As senhas não conferem.';errEl.style.display='block';return;}
+  if(np && np.length<4){errEl.textContent='Senha muito curta (mínimo 4 caracteres).';errEl.style.display='block';return;}
+  if(!nu && !np){errEl.textContent='Informe pelo menos um campo para alterar.';errEl.style.display='block';return;}
+  const cr=getCreds();
+  if(nu) cr.user=nu;
+  if(np) cr.pass=np;
+  localStorage.setItem(CK, JSON.stringify(cr));
+  localStorage.removeItem(REC_KEY);
+  okEl.textContent='✅ Acesso atualizado! Redirecionando...';
+  okEl.style.display='block';
+  setTimeout(()=>{
+    window.location.href=window.location.href.split('?')[0];
+  },1800);
+}
 
 // ── LOAD ────────────────────────────────────
 let cfg={}, pendingPhotos={}, pendingSlides={}, defaultPhotos={};
@@ -530,6 +694,7 @@ function loadAll(){
   ['bronze','silver','gold'].forEach(p=>{
     const pl=cfg.planos[p];
     document.getElementById('preco-'+p).value=pl.preco_por_pessoa;
+    if(pl.preco_menos100)document.getElementById('preco-menos100-'+p).value=pl.preco_menos100;
     document.getElementById('pnome-'+p).value=pl.nome||'';
     document.getElementById('pdesc-'+p).value=pl.desc||'';
     renderFeats(p, pl.features||[]);
@@ -615,11 +780,46 @@ function renderDrinksByPlan(){
               <div class="pz-txt" id="dprevtxt-${id}">
                 <span>${d.foto?'Clique para trocar a foto':'Clique para carregar uma foto'}</span></div>
             </div></div>
+          <button onclick="removeDrink('${id}')" style="margin-top:4px;background:transparent;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;width:100%;">🗑 Remover este drink</button>
         </div>`;
       dl.appendChild(card);
     });
-    body.appendChild(dl);sec.appendChild(hdr);sec.appendChild(body);con.appendChild(sec);
+    // Add "+" button
+    const addBtn=document.createElement('button');
+    addBtn.className='add-eq-btn';addBtn.style.marginTop='8px';
+    addBtn.textContent='+ Adicionar Drink';
+    addBtn.onclick=(e)=>{e.stopPropagation();addDrink(pk);};
+    body.appendChild(dl);body.appendChild(addBtn);
+    sec.appendChild(hdr);sec.appendChild(body);con.appendChild(sec);
   });
+}
+
+function addDrink(planKey){
+  const newId='custom_'+Date.now();
+  if(!cfg.drinks)cfg.drinks={};
+  if(!cfg.grupos)cfg.grupos={};
+  cfg.drinks[newId]={nome:'Novo Drink',desc:'Ingredientes do drink',foto:null,cat:'s'};
+  if(!cfg.grupos[planKey])cfg.grupos[planKey]={ids:[]};
+  cfg.grupos[planKey].ids.push(newId);
+  renderDrinksByPlan();
+  dirty();
+  // Open the new card
+  setTimeout(()=>{
+    const b=document.getElementById('dbody-'+newId);
+    const h=document.getElementById('dhdr-'+newId);
+    const t=document.getElementById('dtog-'+newId);
+    if(b){b.classList.add('open');h&&h.classList.add('open');t&&(t.textContent='▴');}
+    b&&b.scrollIntoView({behavior:'smooth',block:'center'});
+  },80);
+}
+
+function removeDrink(id){
+  if(!confirm('Remover este drink?'))return;
+  delete cfg.drinks[id];
+  ['bronze','silver','gold'].forEach(pk=>{
+    if(cfg.grupos[pk])cfg.grupos[pk].ids=cfg.grupos[pk].ids.filter(x=>x!==id);
+  });
+  renderDrinksByPlan();dirty();
 }
 
 function togD(id){
@@ -657,13 +857,30 @@ function renderSlides(){
   const grid=document.getElementById('slides-grid');grid.innerHTML='';
   cfg.barSlides.forEach((src,i)=>{
     const cell=document.createElement('div');cell.className='slide-cell';
-    cell.onclick=()=>document.getElementById('sfile-'+i).click();
+    cell.onclick=(e)=>{if(e.target.classList.contains('slide-del'))return;document.getElementById('sfile-'+i).click();};
     cell.innerHTML=`<input type="file" id="sfile-${i}" accept="image/*" onchange="handleSlide(this,${i})">
       <span class="slide-num">${i+1}</span>
+      <button class="slide-del" onclick="event.stopPropagation();removeSlide(${i})" title="Remover foto">✕</button>
       ${src?`<img src="${src}" id="simg-${i}">`:`<div class="slide-cell-ph" id="simg-${i}">🍸</div>`}
       <div class="slide-lbl">${src?'Clique para trocar':'Clique para adicionar'}</div>`;
     grid.appendChild(cell);
   });
+}
+
+function addSlide(){
+  if(!cfg.barSlides)cfg.barSlides=[];
+  cfg.barSlides.push(null);
+  renderSlides();dirty();
+  setTimeout(()=>{
+    const grid=document.getElementById('slides-grid');
+    if(grid){const last=grid.lastElementChild;last&&last.scrollIntoView({behavior:'smooth',block:'center'});}
+  },80);
+}
+
+function removeSlide(i){
+  if(!confirm('Remover esta foto?'))return;
+  cfg.barSlides.splice(i,1);
+  renderSlides();dirty();
 }
 
 function handleSlide(inp,i){
@@ -691,8 +908,10 @@ function renderBarModels(){
     const d=document.createElement('div');d.className='bar-model-card';
     d.innerHTML=`
       <div class="bar-model-top">
-        <div class="emoji-pick" id="emoji-${i}" contenteditable="true"
-          oninput="dirty()" style="outline:none;">${m.emoji}</div>
+        <div style="position:relative;">
+          <button class="emoji-btn" id="emoji-btn-${i}" onclick="toggleEmojiPanel(${i})">${m.emoji}</button>
+          <div class="emoji-panel" id="emoji-panel-${i}"></div>
+        </div>
         <div style="flex:1;">
           <div class="fg" style="margin-bottom:8px;">
             <label class="fl">Nome do Modelo</label>
@@ -700,9 +919,86 @@ function renderBarModels(){
         </div>
       </div>
       <div class="fg"><label class="fl">Descrição</label>
-        <input class="fi" id="bdesc-${i}" value="${esc(m.desc)}" oninput="dirty()"></div>`;
+        <input class="fi" id="bdesc-${i}" value="${esc(m.desc)}" oninput="dirty()"></div>
+      <button onclick="removeBarModel(${i})" style="background:transparent;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;width:100%;margin-top:4px;">🗑 Remover modelo</button>`;
     con.appendChild(d);
   });
+}
+
+
+// ── EMOJI PICKER ─────────────────────────────
+const EMOJI_CATS = {
+  '🍸 Drinks': ['🍸','🍹','🍺','🍻','🥂','🍾','🥃','🧃','🧉','🫗','🍷','🥤','🧋','☕','🫖','🍵','🧊','🍶'],
+  '🎉 Festa':  ['🎉','🎊','🎈','🎁','🎀','🥳','🪅','🎆','🎇','✨','🌟','💫','⭐','🌠','🎶','🎵','🎤','🎸'],
+  '🌿 Frutas': ['🍋','🍊','🍓','🍒','🍑','🥭','🍍','🥝','🍇','🍉','🍌','🫐','🥥','🍏','🍎','🍐','🥑','🫒'],
+  '🍽 Geral':  ['🍽','🥂','🫙','🧂','🧄','🌶','🫑','🥒','🍃','🌿','🌱','🌾','🫚','🫛','🧅','🥬','🌰','🫘'],
+  '😊 Caras':  ['😊','😍','🥰','😎','🤩','😋','😄','🤗','😏','🥴','😤','🫡','🤓','😜','🤪','🫠','🥹','😇'],
+  '❤ Símbolos':['❤','🧡','💛','💚','💙','💜','🖤','💖','💝','💎','👑','🏆','🥇','⚡','🔥','💧','🌊','🌈'],
+};
+let _activeEmojiIdx = -1;
+
+function toggleEmojiPanel(i){
+  // Close any open panel first
+  document.querySelectorAll('.emoji-panel.open').forEach(p=>{
+    const pi=parseInt(p.id.split('-').pop());
+    if(pi!==i)p.classList.remove('open');
+  });
+  const panel=document.getElementById('emoji-panel-'+i);
+  if(!panel)return;
+  if(!panel.dataset.built)_buildEmojiPanel(panel,i);
+  panel.classList.toggle('open');
+  _activeEmojiIdx=panel.classList.contains('open')?i:-1;
+}
+
+function _buildEmojiPanel(panel,i){
+  panel.dataset.built='1';
+  const cats=Object.keys(EMOJI_CATS);
+  const catBar=document.createElement('div');catBar.className='emoji-panel-cats';
+  const grid=document.createElement('div');grid.className='emoji-grid';
+  function showCat(cat){
+    grid.innerHTML='';
+    catBar.querySelectorAll('.emoji-panel-cat').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
+    EMOJI_CATS[cat].forEach(em=>{
+      const sp=document.createElement('span');sp.className='emoji-opt';sp.textContent=em;
+      sp.onclick=()=>{
+        document.getElementById('emoji-btn-'+i).textContent=em;
+        panel.classList.remove('open');
+        dirty();
+      };
+      grid.appendChild(sp);
+    });
+  }
+  cats.forEach((cat,ci)=>{
+    const b=document.createElement('button');b.className='emoji-panel-cat'+(ci===0?' active':'');
+    b.dataset.cat=cat;b.textContent=cat;
+    b.onclick=(e)=>{e.stopPropagation();showCat(cat);};
+    catBar.appendChild(b);
+  });
+  panel.appendChild(catBar);panel.appendChild(grid);
+  showCat(cats[0]);
+}
+
+// Close emoji panels on outside click
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.emoji-btn')&&!e.target.closest('.emoji-panel')){
+    document.querySelectorAll('.emoji-panel.open').forEach(p=>p.classList.remove('open'));
+  }
+});
+
+function addBarModel(){
+  if(!cfg.barModels)cfg.barModels=[];
+  cfg.barModels.push({emoji:'🍸',nome:'Novo Modelo',desc:'Descrição do modelo de bar'});
+  renderBarModels();dirty();
+  setTimeout(()=>{
+    const list=document.getElementById('bar-models-list');
+    if(list){const last=list.lastElementChild;last&&last.scrollIntoView({behavior:'smooth',block:'center'});}
+  },80);
+}
+
+function removeBarModel(i){
+  if(!confirm('Remover este modelo de bar?'))return;
+  cfg.barModels.splice(i,1);
+  renderBarModels();dirty();
 }
 
 // ── EQUIPE ───────────────────────────────────
@@ -866,6 +1162,7 @@ function save(){
       for(let i=0;i<5;i++){const el=document.getElementById(`feat-${p}-${i}`);if(el)feats.push(el.value);}
       ov.planos[p]={
         preco_por_pessoa:parseFloat(document.getElementById('preco-'+p).value)||DEF.planos[p].preco_por_pessoa,
+        preco_menos100:(()=>{const v=parseFloat(document.getElementById('preco-menos100-'+p).value);return v>0?v:null;})(),
         nome:document.getElementById('pnome-'+p).value,
         desc:document.getElementById('pdesc-'+p).value,
         features:feats,
@@ -885,7 +1182,7 @@ function save(){
 
     // Bar models
     cfg.barModels.forEach((_,i)=>{
-      const eEl=document.getElementById('emoji-'+i);
+      const eEl=document.getElementById('emoji-btn-'+i);
       const nEl=document.getElementById('bname-'+i);
       const dEl=document.getElementById('bdesc-'+i);
       ov.barModels.push({
@@ -934,6 +1231,7 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 
 // ── INIT ─────────────────────────────────────
 window.addEventListener('load',()=>{
+  if(checkRecoveryUrl())return;
   if(sessionStorage.getItem(AK)==='1'){
     document.getElementById('ls').style.display='none';
     document.getElementById('as').style.display='block';

@@ -773,6 +773,14 @@ select option{background:#111;}
 .adm-err{color:#e74c3c;font-size:12px;margin-top:10px;display:none;}
 .adm-cancel{font-size:11px;color:#666;cursor:pointer;margin-top:14px;display:inline-block;text-decoration:underline;text-underline-offset:3px;}
 .adm-cancel:hover{color:#c9a84c;}
+.adm-rec{font-size:11px;color:#888;cursor:pointer;margin-top:8px;display:inline-block;text-decoration:underline;text-underline-offset:3px;}
+.adm-rec:hover{color:#c9a84c;}
+.adm-rec-box{background:#1a1a1a;border:1px solid rgba(201,168,76,.25);border-radius:10px;padding:14px;margin-top:12px;text-align:left;display:none;}
+.adm-rec-box.open{display:block;}
+.adm-rec-opt{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;color:#aaa;}
+.adm-rec-opt:last-child{border-bottom:none;}
+.adm-rec-opt a{color:var(--gold);text-decoration:none;font-size:11px;margin-left:auto;}
+.adm-rec-opt a:hover{text-decoration:underline;}
 
 </style>
 </head>
@@ -1282,7 +1290,7 @@ select option{background:#111;}
       <!-- Closing message -->
       <div style="background:var(--card);border:1px solid var(--border-gold);border-radius:var(--radius);padding:20px;margin-bottom:16px;">
         <div style="font-size:13px;line-height:1.85;color:var(--text-mid);">
-          Para nós aqui da Rocket, será um prazer fazer parte desse momento tão especial.<br><br>Acreditamos que cada celebração merece ser única, e os drinks são uma forma de transformar o ambiente, criar experiências e tornar tudo ainda mais inesquecível.<br><br>Cuidamos de tudo para que você apenas brinde e aproveite seu evento.<br><br>Esperamos poder celebrar esse evento junto com você, <strong id="closing-name" style="color:var(--gold);">você</strong>.
+          Para nós aqui da Rocket, será um prazer fazer parte desse momento tão especial.<br>Acreditamos que cada celebração merece ser única, e os drinks são uma forma de transformar o ambiente, criar experiências e tornar tudo ainda mais inesquecível.<br>Cuidamos de tudo para que você apenas brinde e aproveite seu evento.<br>Esperamos poder celebrar esse evento junto com você, <strong id="closing-name" style="color:var(--gold);">você</strong>.
         </div>
       </div>
 
@@ -1741,9 +1749,9 @@ const CONFIG = {
   // PREÇOS DOS PLANOS (R$ por pessoa)
   // Total = preco_por_pessoa × nº_convidados
   planos: {
-    bronze:  { preco_por_pessoa: 22.00 },   // Plano Caipirinhas
-    silver:  { preco_por_pessoa: 28.00 },   // Plano Rocket
-    gold:    { preco_por_pessoa: 38.00 },   // Plano Gold
+    bronze:  { preco_por_pessoa: 22.00, preco_menos100: 28.00 },   // Plano Caipirinhas
+    silver:  { preco_por_pessoa: 28.00, preco_menos100: 34.00 },   // Plano Rocket
+    gold:    { preco_por_pessoa: 38.00, preco_menos100: 44.00 },   // Plano Gold
     diamond: { preco_por_pessoa: 38.00 },   // (oculto)
   },
   taxa_deslocamento: 0,   // ← valor fixo de deslocamento (R$), ajuste conforme endereço
@@ -2197,15 +2205,11 @@ function getStaff(guests) {
 
 // ── PREÇO POR PESSOA conforme nº de convidados ────────────────
 function getPrecoPP(plano, guests) {
-  const tab = {
-    bronze:  { normal:22, mini:28 },
-    silver:  { normal:28, mini:34 },
-    gold:    { normal:38, mini:44 },
-    diamond: { normal:38, mini:44 },
-  };
-  const t = tab[plano];
-  if (!t) return 0;
-  return (guests > 0 && guests < 100) ? t.mini : t.normal;
+  const pl = CONFIG.planos[plano];
+  if (!pl) return 0;
+  const normal = pl.preco_por_pessoa || 0;
+  const mini   = pl.preco_menos100 || normal; // fallback to normal if not set
+  return (guests > 0 && guests < 100) ? mini : normal;
 }
 
 // ── HANDLER campo 600+ ────────────────────────────────────────
@@ -2782,6 +2786,37 @@ function admClose(){
   document.getElementById('adm-u').value='';
   document.getElementById('adm-p').value='';
   document.getElementById('adm-err').style.display='none';
+  const rb=document.getElementById('adm-rec-box');if(rb)rb.classList.remove('open');
+}
+
+function admToggleRec(){
+  const box=document.getElementById('adm-rec-box');
+  if(!box)return;
+  if(box.classList.contains('open')){box.classList.remove('open');return;}
+  let creds={recEmail1:'cristhianj.godoy@gmail.com',recEmail2:'larissavictoriaschmitt@gmail.com',recWhatsapp:'5551997397781'};
+  try{const s=JSON.parse(localStorage.getItem('rocketAdminCreds'));if(s)creds={...creds,...s};}catch(e){}
+  // Generate recovery link pointing to admin.html
+  const token=btoa(Date.now()+'_'+Math.random().toString(36).slice(2));
+  localStorage.setItem('rocketRecovery',JSON.stringify({token,expires:Date.now()+30*60*1000}));
+  const adminUrl=(function(){const s=window.location.href;const p=s.lastIndexOf('/');return s.slice(0,p+1)+'admin.html';}());
+  const link=adminUrl+'?recover='+encodeURIComponent(token);
+  const subEmail=encodeURIComponent('Recuperação de Acesso – Rocket Drinks');
+  const bodyEmail=encodeURIComponent('Acesse o link para recuperar o acesso:\n\n'+link+'\n\nVálido por 30 minutos.');
+  const msgWpp=encodeURIComponent('🔑 *Recuperação Rocket Drinks*\nAcesse: '+link+'\n_Válido por 30 min._');
+  function maskC(v){if(!v)return'';if(v.includes('@')){const[l,d]=v.split('@');return(l[0]||'')+'***@'+d;}const d=v.replace(/\D/g,'');return'+'+d.slice(0,4)+' *****'+d.slice(-4);}
+  const opts=[];
+  if(creds.recEmail1)opts.push({icon:'📧',label:maskC(creds.recEmail1),href:`mailto:${creds.recEmail1}?subject=${subEmail}&body=${bodyEmail}`});
+  if(creds.recEmail2)opts.push({icon:'📧',label:maskC(creds.recEmail2),href:`mailto:${creds.recEmail2}?subject=${subEmail}&body=${bodyEmail}`});
+  if(creds.recWhatsapp){const n=creds.recWhatsapp.replace(/\D/g,'');opts.push({icon:'💬',label:maskC(creds.recWhatsapp),href:`https://wa.me/${n}?text=${msgWpp}`});}
+  let html='';
+  if(opts.length===0){html='<div style="font-size:12px;color:#888;text-align:center;padding:4px 0;">Nenhum contato de recuperação configurado.</div>';}
+  else{
+    html+='<div style="font-size:11px;color:#888;margin-bottom:10px;line-height:1.6;">Escolha como receber o link de recuperação:</div>';
+    html+=opts.map(o=>`<div class="adm-rec-opt"><span>${o.icon}</span><span>${o.label}</span><a href="${o.href}" target="_blank">Enviar →</a></div>`).join('');
+    html+='<div style="font-size:10px;color:#666;margin-top:8px;text-align:center;">⏱ Link válido por 30 minutos.</div>';
+  }
+  box.innerHTML=html;
+  box.classList.add('open');
 }
 function admLogin(){
   const u=document.getElementById('adm-u').value.trim();
@@ -2821,6 +2856,9 @@ function admLogin(){
     <button class="adm-btn" onclick="admLogin()">Entrar</button>
     <div class="adm-err" id="adm-err">Usuário ou senha incorretos.</div>
     <span class="adm-cancel" onclick="admClose()">Cancelar</span>
+    <br>
+    <span class="adm-rec" onclick="admToggleRec()">Esqueceu a senha?</span>
+    <div class="adm-rec-box" id="adm-rec-box"></div>
   </div>
 </div>
 </body>
