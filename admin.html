@@ -539,11 +539,11 @@ function maskContact(val){
   return '+'+d.slice(0,4)+' *****'+d.slice(-4);
 }
 // ── RECOVERY FLOW ──────────────────────────────────────────────
-const REC_KEY = 'rocketRecovery';
-
 function _genRecoveryLink(){
-  const token = btoa(Date.now()+'_'+Math.random().toString(36).slice(2));
-  localStorage.setItem(REC_KEY, JSON.stringify({token, expires: Date.now()+30*60*1000}));
+  const ts = Date.now();
+  const c = getCreds();
+  const sig = btoa(c.pass + ':' + ts);
+  const token = btoa(ts + ':' + sig);
   const base = window.location.href.split('?')[0];
   return base + '?recover=' + encodeURIComponent(token);
 }
@@ -602,18 +602,23 @@ function closeRec(){document.getElementById('recmodal').classList.remove('open')
 // ── RECOVERY TOKEN CHECK (URL param) ────────────────────────────────────
 function checkRecoveryUrl(){
   const params=new URLSearchParams(window.location.search);
-  const token=params.get('recover');
-  if(!token)return false;
+  const raw=params.get('recover');
+  if(!raw)return false;
   try{
-    const stored=JSON.parse(localStorage.getItem(REC_KEY));
-    if(stored && stored.token===decodeURIComponent(token) && stored.expires>Date.now()){
-      _showRecoverForm();
-      return true;
-    }
+    const decoded=atob(raw);
+    const colonIdx=decoded.indexOf(':');
+    if(colonIdx<0)throw'bad';
+    const ts=parseInt(decoded.substring(0,colonIdx));
+    const sig=decoded.substring(colonIdx+1);
+    if(isNaN(ts)||Date.now()-ts>30*60*1000)throw'expired';
+    const c=getCreds();
+    const expected=btoa(c.pass+':'+ts);
+    if(sig!==expected)throw'invalid';
+    _showRecoverForm();
+    return true;
   }catch(e){}
-  // Invalid/expired token — show error on login
-  document.getElementById('lerr').textContent='Link de recuperação inválido ou expirado.';
-  document.getElementById('lerr').style.display='block';
+  const lerr=document.getElementById('lerr');
+  if(lerr){lerr.textContent='Link de recuperação inválido ou expirado.';lerr.style.display='block';}
   return false;
 }
 
@@ -651,7 +656,7 @@ function saveRecovery(){
   if(nu) cr.user=nu;
   if(np) cr.pass=np;
   localStorage.setItem(CK, JSON.stringify(cr));
-  localStorage.removeItem(REC_KEY);
+  // token é auto-validável, sem limpeza de localStorage necessária
   okEl.textContent='✅ Acesso atualizado! Redirecionando...';
   okEl.style.display='block';
   setTimeout(()=>{
