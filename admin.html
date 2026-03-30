@@ -245,6 +245,7 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
     <button class="tb"        onclick="showTab('planos')"  >📦 Planos</button>
     <button class="tb"        onclick="showTab('drinks')"  >🍹 Drinks</button>
     <button class="tb"        onclick="showTab('bares')"   >🍸 Bares</button>
+    <button class="tb"        onclick="showTab('adicionais')">🎁 Adicionais</button>
     <button class="tb"        onclick="showTab('equipe')"  >👥 Equipe</button>
     <button class="tb"        onclick="showTab('seg')"     >🔐 Segurança</button>
   </div>
@@ -368,6 +369,19 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
         <textarea class="fta" id="bar-aviso-txt" rows="4" oninput="dirty()"></textarea></div>
     </div>
 
+    <!-- ── ADICIONAIS ─────────────────────────── -->
+    <div class="tp" id="tab-adicionais">
+      <div class="stitle">🖼️ Fotos do Carrossel de Adicionais</div>
+      <div class="ibox">Clique em cada foto para substituí-la. As imagens são exibidas no carrossel da etapa de adicionais do orçamento.</div>
+      <div class="slides-grid" id="adic-slides-grid"></div>
+      <button class="add-eq-btn" style="margin-top:8px;" onclick="addAdicSlide()">+ Adicionar Foto</button>
+      <div class="dv"></div>
+      <div class="stitle">🎁 Itens de Adicionais</div>
+      <div class="ibox">Configure os itens disponíveis. Tipos: <strong>simples</strong> (preço fixo), <strong>opcoes</strong> (sub-opções com preços), <strong>livre</strong> (sem preço, tratado via WhatsApp).</div>
+      <div id="adic-items-list"></div>
+      <button class="add-eq-btn" style="margin-top:8px;" onclick="addAdicItemRow()">+ Adicionar Item</button>
+    </div>
+
     <!-- ── EQUIPE ────────────────────────────────── -->
     <div class="tp" id="tab-equipe">
       <div class="stitle">👥 Equipe por Faixa de Convidados</div>
@@ -477,6 +491,15 @@ const DEF = {
     dd4:{nome:'Rocket',desc:'Whisky Jack Honey, maracujá e xarope de gengibre',foto:null,cat:'s'},
   },
   barSlides:[null,null,null,null,null],
+  adicSlides:[null,null,null],
+  adicItems:[
+    { id:'bartender', nome:'Bar tender extra', preco:350, unit:'por pessoa', tipo:'simples', emoji:'🍹' },
+    { id:'torre', nome:'Torre de taças', preco:200, unit:'', tipo:'simples', emoji:'🥂' },
+    { id:'papel', nome:'Papel de arroz personalizado', preco:150, unit:'', tipo:'simples', emoji:'🌸' },
+    { id:'agua', nome:'Água saborizada', tipo:'opcoes', emoji:'💧',
+      opcoes:[ {label:'Somente na recepção',preco:120}, {label:'Para o evento todo',preco:250} ] },
+    { id:'outros', nome:'Outros', preco:null, unit:'', tipo:'livre', emoji:'✏️' }
+  ],
   barModels:[
     {emoji:'🪵',nome:'Bar Modular Simples',desc:'Estrutura compacta e elegante para espaços menores'},
     {emoji:'🏗️',nome:'Bar Modular Premium',desc:'Design exclusivo com iluminação integrada'},
@@ -665,7 +688,7 @@ function saveRecovery(){
 }
 
 // ── LOAD ────────────────────────────────────
-let cfg={}, pendingPhotos={}, pendingSlides={}, defaultPhotos={};
+let cfg={}, pendingPhotos={}, pendingSlides={}, pendingAdicSlides={}, defaultPhotos={};
 
 function loadAll(){
   let stored={};
@@ -685,6 +708,8 @@ function loadAll(){
   if(stored.barModels) cfg.barModels=stored.barModels;
   if(stored.barAviso) cfg.barAviso=stored.barAviso;
   if(stored.equipe&&Array.isArray(stored.equipe)&&stored.equipe.length>0) cfg.equipe=stored.equipe;
+  if(stored.adicSlides) cfg.adicSlides=stored.adicSlides;
+  if(stored.adicItems&&Array.isArray(stored.adicItems)&&stored.adicItems.length>0) cfg.adicItems=stored.adicItems;
 
   // Load default drink photos synced from main app
   defaultPhotos={};
@@ -713,6 +738,10 @@ function loadAll(){
 
   // Bar models
   renderBarModels();
+
+  // Adicionais
+  renderAdicSlides();
+  renderAdicItems();
 
   // Bar aviso
   document.getElementById('bar-aviso-txt').value=cfg.barAviso||'';
@@ -1157,6 +1186,8 @@ function save(){
       barSlides:cfg.barSlides.slice(),
       barModels:[],
       barAviso:document.getElementById('bar-aviso-txt').value.trim(),
+      adicSlides:cfg.adicSlides.slice(),
+      adicItems:[],
     };
     // Apply pending slides
     Object.keys(pendingSlides).forEach(i=>{ov.barSlides[i]=pendingSlides[i];});
@@ -1197,6 +1228,26 @@ function save(){
       });
     });
 
+    // Adicionais items
+    cfg.adicItems.forEach(function(_,i){
+      const eEl=document.getElementById('adic-emoji-'+i);
+      const nEl=document.getElementById('adic-nome-'+i);
+      const tEl=document.getElementById('adic-tipo-'+i);
+      const pEl=document.getElementById('adic-preco-'+i);
+      const uEl=document.getElementById('adic-unit-'+i);
+      if(!nEl)return;
+      const entry=JSON.parse(JSON.stringify(cfg.adicItems[i]));
+      if(eEl)entry.emoji=eEl.textContent.trim();
+      entry.nome=nEl.value;
+      if(tEl)entry.tipo=tEl.value;
+      if(pEl&&pEl.value!=='')entry.preco=parseFloat(pEl.value)||null;
+      if(uEl)entry.unit=uEl.value;
+      if(entry.tipo==='opcoes'){const opcoes=[];let j=0;while(true){const lEl=document.getElementById('adic-op-label-'+i+'-'+j);const opEl=document.getElementById('adic-op-preco-'+i+'-'+j);if(!lEl)break;opcoes.push({label:lEl.value,preco:parseFloat(opEl&&opEl.value)||0});j++;}entry.opcoes=opcoes;}
+      cfg.adicItems[i]=entry;ov.adicItems.push(entry);
+    });
+    Object.keys(pendingAdicSlides).forEach(function(i){ov.adicSlides[i]=pendingAdicSlides[i];});
+    cfg.adicSlides=ov.adicSlides.slice();
+
     // Equipe ranges
     const eqRows=document.querySelectorAll('.eq-row');
     const equipeData=[];
@@ -1218,10 +1269,126 @@ function save(){
 
     localStorage.setItem(SK,JSON.stringify(ov));
     Object.keys(pendingPhotos).forEach(id=>{if(cfg.drinks[id])cfg.drinks[id].foto=pendingPhotos[id];});
-    pendingPhotos={};pendingSlides={};
+    pendingPhotos={};pendingSlides={};pendingAdicSlides={};
     markClean();toast('✓ Salvo com sucesso!','var(--ok)');
   }catch(e){console.error(e);toast('⚠ Erro: '+e.message,'var(--danger)');}
   btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';
+}
+
+// ── ADICIONAIS SLIDES ────────────────────────
+function renderAdicSlides(){
+  const grid=document.getElementById('adic-slides-grid');
+  if(!grid)return;
+  grid.innerHTML='';
+  cfg.adicSlides.forEach(function(src,i){
+    const cell=document.createElement('div');cell.className='slide-cell';
+    cell.onclick=function(e){if(e.target.classList.contains('slide-del'))return;document.getElementById('adic-sfile-'+i).click();};
+    cell.innerHTML='<input type="file" id="adic-sfile-'+i+'" accept="image/*" onchange="handleAdicSlide(this,'+i+')">'+
+      '<span class="slide-num">'+(i+1)+'</span>'+
+      '<button class="slide-del" onclick="event.stopPropagation();removeAdicSlide('+i+')" title="Remover foto">✕</button>'+
+      (src?'<img src="'+src+'" id="adic-simg-'+i+'">'
+          :'<div class="slide-cell-ph" id="adic-simg-'+i+'">🎁</div>')+
+      '<div class="slide-lbl">'+(src?'Clique para trocar':'Clique para adicionar')+'</div>';
+    grid.appendChild(cell);
+  });
+}
+function addAdicSlide(){
+  if(!cfg.adicSlides)cfg.adicSlides=[];
+  cfg.adicSlides.push(null);renderAdicSlides();dirty();
+  setTimeout(function(){const grid=document.getElementById('adic-slides-grid');if(grid){const last=grid.lastElementChild;last&&last.scrollIntoView({behavior:'smooth',block:'center'});}},80);
+}
+function removeAdicSlide(i){if(!confirm('Remover esta foto?'))return;cfg.adicSlides.splice(i,1);renderAdicSlides();dirty();}
+function handleAdicSlide(inp,i){
+  if(!inp.files||!inp.files[0])return;
+  const r=new FileReader();
+  r.onload=function(e){
+    const url=e.target.result;pendingAdicSlides[i]=url;cfg.adicSlides[i]=url;
+    const el=document.getElementById('adic-simg-'+i);
+    if(el&&el.tagName==='IMG'){el.src=url;}
+    else if(el){const img=document.createElement('img');img.id='adic-simg-'+i;img.src=url;el.replaceWith(img);}
+    const cell=inp.closest('.slide-cell');
+    if(cell){const lbl=cell.querySelector('.slide-lbl');if(lbl)lbl.textContent='Clique para trocar';}
+    dirty();
+  };r.readAsDataURL(inp.files[0]);
+}
+// ── ADICIONAIS ITEMS ─────────────────────────
+function renderAdicItems(){
+  const con=document.getElementById('adic-items-list');if(!con)return;con.innerHTML='';
+  cfg.adicItems.forEach(function(item,i){
+    const d=document.createElement('div');d.className='bar-model-card';
+    const isO=item.tipo==='opcoes';const isL=item.tipo==='livre';
+    const opH=isO?_renderAdicOpcoesHtml(item.opcoes||[],i):'';
+    d.innerHTML=
+      '<div class="bar-model-top">'+
+        '<div style="position:relative;"><button class="emoji-btn" id="adic-emoji-'+i+'" onclick="toggleAdicEmoji('+i+')">'+esc(item.emoji||'⭐')+'</button>'+
+        '<div class="emoji-panel" id="adic-emoji-panel-'+i+'"></div></div>'+
+        '<div style="flex:1;"><div class="fg" style="margin-bottom:8px;"><label class="fl">Nome do Item</label>'+
+        '<input class="fi" id="adic-nome-'+i+'" value="'+esc(item.nome||'')+'" oninput="dirty()"></div></div></div>'+
+      '<div class="frow">'+
+        '<div class="fg"><label class="fl">Tipo</label><select class="fi" id="adic-tipo-'+i+'" onchange="updateAdicTipo('+i+')" style="cursor:pointer;">'+
+          '<option value="simples"'+(item.tipo==='simples'?' selected':'')+'>Simples (preço fixo)</option>'+
+          '<option value="opcoes"'+(item.tipo==='opcoes'?' selected':'')+'>Opções (com sub-opções)</option>'+
+          '<option value="livre"'+(item.tipo==='livre'?' selected':'')+'>Livre (sem preço)</option></select></div>'+
+        '<div class="fg" id="adic-preco-wrap-'+i+'" style="'+(isL||isO?'display:none':'')+'">'+'<label class="fl">Preço (R$)</label>'+
+          '<input class="fi" id="adic-preco-'+i+'" type="number" step="0.01" min="0" value="'+(item.preco!=null?item.preco:'')+'" oninput="dirty()"></div>'+
+        '<div class="fg" id="adic-unit-wrap-'+i+'" style="'+(isL||isO?'display:none':'')+'">'+'<label class="fl">Unidade</label>'+
+          '<input class="fi" id="adic-unit-'+i+'" placeholder="ex: por pessoa" value="'+esc(item.unit||'')+'" oninput="dirty()"></div></div>'+
+      '<div id="adic-opcoes-admin-'+i+'" style="'+(isO?'':'display:none')+'">'+opH+
+        '<button onclick="addAdicOpcao('+i+')" style="background:transparent;border:1px dashed var(--bdg);color:var(--gold);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;width:100%;margin-top:6px;">+ Adicionar Sub-opção</button></div>'+
+      '<button onclick="removeAdicItem('+i+')" style="background:transparent;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;width:100%;margin-top:8px;">🗑 Remover item</button>';
+    con.appendChild(d);
+  });
+}
+function _renderAdicOpcoesHtml(opcoes,idx){
+  return opcoes.map(function(op,j){
+    return '<div class="frow" style="margin-bottom:6px;">'+
+      '<div class="fg"><label class="fl">Rótulo</label><input class="fi" id="adic-op-label-'+idx+'-'+j+'" value="'+esc(op.label||'')+'" oninput="dirty()"></div>'+
+      '<div class="fg" style="max-width:110px;"><label class="fl">Preço (R$)</label><input class="fi" id="adic-op-preco-'+idx+'-'+j+'" type="number" step="0.01" min="0" value="'+(op.preco||'')+'" oninput="dirty()"></div>'+
+      '<div style="display:flex;align-items:flex-end;padding-bottom:2px;"><button onclick="removeAdicOpcao('+idx+','+j+')" style="background:transparent;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;">✕</button></div></div>';
+  }).join('');
+}
+function updateAdicTipo(i){
+  const tipo=document.getElementById('adic-tipo-'+i).value;
+  const isO=tipo==='opcoes';const isL=tipo==='livre';
+  document.getElementById('adic-preco-wrap-'+i).style.display=(isO||isL)?'none':'';
+  document.getElementById('adic-unit-wrap-'+i).style.display=(isO||isL)?'none':'';
+  document.getElementById('adic-opcoes-admin-'+i).style.display=isO?'':'none';
+  cfg.adicItems[i].tipo=tipo;dirty();
+}
+function addAdicOpcao(i){if(!cfg.adicItems[i].opcoes)cfg.adicItems[i].opcoes=[];cfg.adicItems[i].opcoes.push({label:'Nova opção',preco:0});renderAdicItems();dirty();}
+function removeAdicOpcao(i,j){if(!confirm('Remover esta sub-opção?'))return;cfg.adicItems[i].opcoes.splice(j,1);renderAdicItems();dirty();}
+function addAdicItemRow(){
+  cfg.adicItems.push({id:'item-'+Date.now(),nome:'Novo item',preco:0,unit:'',tipo:'simples',emoji:'⭐'});
+  renderAdicItems();dirty();
+  setTimeout(function(){const con=document.getElementById('adic-items-list');if(con){const last=con.lastElementChild;last&&last.scrollIntoView({behavior:'smooth',block:'center'});}},80);
+}
+function removeAdicItem(i){if(!confirm('Remover este item?'))return;cfg.adicItems.splice(i,1);renderAdicItems();dirty();}
+let _adicEmojiIdx=-1;
+function toggleAdicEmoji(i){
+  document.querySelectorAll('.emoji-panel.open').forEach(function(p){if(parseInt(p.id.split('-').pop())!==i)p.classList.remove('open');});
+  const panel=document.getElementById('adic-emoji-panel-'+i);if(!panel)return;
+  if(!panel.dataset.built)_buildAdicEmojiPanel(panel,i);
+  panel.classList.toggle('open');_adicEmojiIdx=panel.classList.contains('open')?i:-1;
+}
+function _buildAdicEmojiPanel(panel,i){
+  panel.dataset.built='1';
+  const cats=Object.keys(EMOJI_CATS);
+  const catBar=document.createElement('div');catBar.className='emoji-panel-cats';
+  const grid=document.createElement('div');grid.className='emoji-grid';
+  function showCat(cat){
+    grid.innerHTML='';
+    catBar.querySelectorAll('.emoji-panel-cat').forEach(function(b){b.classList.toggle('active',b.dataset.cat===cat);});
+    EMOJI_CATS[cat].forEach(function(em){
+      const sp=document.createElement('span');sp.className='emoji-opt';sp.textContent=em;
+      sp.onclick=function(){document.getElementById('adic-emoji-'+i).textContent=em;panel.classList.remove('open');_adicEmojiIdx=-1;dirty();};
+      grid.appendChild(sp);
+    });
+  }
+  cats.forEach(function(cat){
+    const btn=document.createElement('button');btn.className='emoji-panel-cat';btn.dataset.cat=cat;
+    btn.textContent=cat.split(' ')[0];btn.onclick=function(){showCat(cat);};catBar.appendChild(btn);
+  });
+  panel.appendChild(catBar);panel.appendChild(grid);showCat(cats[0]);
 }
 
 // ── TOAST ────────────────────────────────────
