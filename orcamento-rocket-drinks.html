@@ -2795,9 +2795,9 @@ function admToggleRec(){
   if(box.classList.contains('open')){box.classList.remove('open');return;}
   let creds={recEmail1:'cristhianj.godoy@gmail.com',recEmail2:'larissavictoriaschmitt@gmail.com',recWhatsapp:'5551997397781'};
   try{const s=JSON.parse(localStorage.getItem('rocketAdminCreds'));if(s)creds={...creds,...s};}catch(e){}
-  // Generate recovery link pointing to admin.html
-  const token=btoa(Date.now()+'_'+Math.random().toString(36).slice(2));
-  localStorage.setItem('rocketRecovery',JSON.stringify({token,expires:Date.now()+30*60*1000}));
+  // Token auto-validável (sem localStorage) — funciona em qualquer browser/dispositivo
+  const _ts=Date.now();const _pass=(creds.pass||'rocket2024');
+  const _sig=btoa(_pass+':'+_ts);const token=btoa(_ts+':'+_sig);
   const adminUrl=(function(){const s=window.location.href;const p=s.lastIndexOf('/');return s.slice(0,p+1)+'admin.html';}());
   const link=adminUrl+'?recover='+encodeURIComponent(token);
   const subEmail=encodeURIComponent('Recuperação de Acesso – Rocket Drinks');
