@@ -1,11 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=orcamento-rocket-drinks.html">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rocket Drinks</title>
+<style>body{margin:0;background:#0d0d0d;}</style>
 </head>
 <body>
-<script>window.location.replace('orcamento-rocket-drinks.html');</script>
+<script>
+(async function(){
+  try{
+    if(!localStorage.getItem('rocketAdminCreds')){
+      const r=await fetch('rocket-config.json?t='+Date.now());
+      if(r.ok){
+        const cfg=await r.text();
+        localStorage.setItem('rocketDrinksConfig',cfg);
+      }
+    }
+  }catch(e){}
+  window.location.replace('orcamento-rocket-drinks.html');
+})();
+</script>
 </body>
 </html>
