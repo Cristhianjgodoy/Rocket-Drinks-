@@ -456,6 +456,7 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 <div class="sbar" id="sbar" style="display:none;">
   <div class="sstatus dirty" id="sstatus">● Alterações não salvas</div>
   <button class="sbtn" id="sbtn" onclick="save()">💾 Salvar Alterações</button>
+  <button class="sbtn" id="pbtn" onclick="publicarNoSite()" style="background:var(--card);border:1px solid var(--gold);color:var(--gold);margin-left:8px;">🚀 Publicar no Site</button>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1605,6 +1606,34 @@ function save(){
   btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';
 }
 
+// ── PUBLICAR NO SITE ─────────────────────────
+async function publicarNoSite(){
+  const stored=localStorage.getItem('rocketDrinksConfig');
+  if(!stored){toast('⚠ Salve primeiro antes de publicar!','var(--danger)');return;}
+  const pb=document.getElementById('pbtn');
+  pb.disabled=true;pb.textContent='⏳ Gerando arquivo...';
+  try{
+    const ov=JSON.parse(stored);
+    const resp=await fetch('orcamento-rocket-drinks.html');
+    if(!resp.ok)throw new Error('Não foi possível carregar orcamento-rocket-drinks.html');
+    let html=await resp.text();
+    const scriptTag=`<script>window.__ADMIN_CFG__=${JSON.stringify(ov)};<\/script>`;
+    html=html.replace(/<script>window\.__ADMIN_CFG__[\s\S]*?<\/script>\n?/,'');
+    html=html.replace('<head>','<head>\n'+scriptTag);
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='orcamento-rocket-drinks.html';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('✓ Arquivo gerado! Suba no GitHub para publicar.','var(--ok)');
+  }catch(e){
+    console.error(e);
+    toast('⚠ Erro: '+e.message,'var(--danger)');
+  }
+  pb.disabled=false;pb.textContent='🚀 Publicar no Site';
+}
+
 // ── ADICIONAIS SLIDES ────────────────────────
 function renderAdicSlides(){
   const grid=document.getElementById('adic-slides-grid');
@@ -1848,4 +1877,4 @@ window.addEventListener('load',()=>{
   </div>
 </div>
 </body>
-</html>
+                         </html>
