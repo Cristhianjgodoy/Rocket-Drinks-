@@ -1634,6 +1634,59 @@ async function publicarNoSite(){
   pb.disabled=false;pb.textContent='🚀 Publicar no Site';
 }
 
+// ── PUBLICAR NO SITE ─────────────────────────
+const GH_TOKEN_KEY='rocketGhToken';
+const GH_REPO_OWNER='Cristhianjgodoy';
+const GH_REPO_NAME='Rocket-Drinks-';
+const GH_FILE_PATH='orcamento-rocket-drinks.html';
+function getGhToken(){return localStorage.getItem(GH_TOKEN_KEY)||'';}
+function openGhTokenModal(){
+  var existing=getGhToken();
+  var m=`<div id="gh-token-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;"><div style="background:#1a1a1a;border:1px solid var(--gold);border-radius:16px;padding:28px;max-width:440px;width:100%;"><h2 style="color:var(--gold);margin:0 0 10px;font-size:17px;">🔑 Token do GitHub</h2><p style="color:#aaa;font-size:13px;margin:0 0 16px;line-height:1.5;">Para publicar automaticamente, você precisa de um <strong style="color:#fff;">Personal Access Token</strong> do GitHub com permissão <code>repo</code>.<br><br><a href="https://github.com/settings/tokens/new?description=RocketDrinks&scopes=repo" target="_blank" style="color:var(--gold);">👉 Clique aqui para criar o token</a><br>Selecione <strong>repo</strong> → clique <strong>Generate token</strong> → copie e cole abaixo.</p><input id="gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value="${existing}" style="width:100%;box-sizing:border-box;background:#111;border:1px solid var(--bdg);color:#fff;border-radius:8px;padding:10px;font-size:13px;margin-bottom:14px;"><div style="display:flex;gap:10px;"><button onclick="saveGhToken()" style="flex:1;background:var(--gold);color:#000;border:none;border-radius:8px;padding:10px;font-weight:700;cursor:pointer;font-size:14px;">Salvar e Publicar</button><button onclick="document.getElementById('gh-token-modal').remove()" style="background:#333;color:#fff;border:none;border-radius:8px;padding:10px;cursor:pointer;font-size:14px;">Cancelar</button></div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',m);
+}
+function saveGhToken(){
+  var t=document.getElementById('gh-token-input').value.trim();
+  if(!t){toast('⚠ Informe o token!','var(--danger)');return;}
+  localStorage.setItem(GH_TOKEN_KEY,t);
+  document.getElementById('gh-token-modal').remove();
+  doPublicar();
+}
+async function publicarNoSite(){
+  const stored=localStorage.getItem(SK);
+  if(!stored){toast('⚠ Salve primeiro antes de publicar!','var(--danger)');return;}
+  const token=getGhToken();
+  if(!token){openGhTokenModal();return;}
+  doPublicar();
+}
+async function doPublicar(){
+  const stored=localStorage.getItem(SK);
+  if(!stored){toast('⚠ Salve primeiro!','var(--danger)');return;}
+  const token=getGhToken();
+  const pb=document.getElementById('pbtn');
+  pb.disabled=true;pb.textContent='⏳ Publicando...';
+  try{
+    const ov=JSON.parse(stored);
+    const shaResp=await fetch(`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/${GH_FILE_PATH}`,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    if(!shaResp.ok){if(shaResp.status===401){localStorage.removeItem(GH_TOKEN_KEY);throw new Error('Token inválido. Clique em Publicar novamente para configurar.');}throw new Error('Erro ao acessar GitHub: '+shaResp.status);}
+    const shaData=await shaResp.json();
+    const currentSha=shaData.sha;
+    pb.textContent='⏳ Baixando arquivo...';
+    const rawResp=await fetch(`https://raw.githubusercontent.com/${GH_REPO_OWNER}/${GH_REPO_NAME}/main/${GH_FILE_PATH}?t=${Date.now()}`);
+    if(!rawResp.ok)throw new Error('Erro ao baixar arquivo do GitHub');
+    let html=await rawResp.text();
+    const scriptTag=`<script>window.__ADMIN_CFG__=${JSON.stringify(ov)};<\/script>`;
+    html=html.replace(/<script>window\.__ADMIN_CFG__[\s\S]*?<\/script>\n?/,'');
+    html=html.replace('<head>','<head>\n'+scriptTag);
+    pb.textContent='⏳ Enviando para o GitHub...';
+    const encoded=btoa(unescape(encodeURIComponent(html)));
+    const putResp=await fetch(`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/${GH_FILE_PATH}`,{method:'PUT',headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify({message:'Atualização via admin Rocket Drinks',content:encoded,sha:currentSha})});
+    if(!putResp.ok){const err=await putResp.json();throw new Error('Erro no GitHub: '+(err.message||putResp.status));}
+    toast('✅ Site atualizado! Aguarde ~1 min para o deploy.','var(--ok)');
+  }catch(e){console.error(e);toast('⚠ '+e.message,'var(--danger)');}
+  pb.disabled=false;pb.textContent='🚀 Publicar no Site';
+}
+
 // ── ADICIONAIS SLIDES ────────────────────────
 function renderAdicSlides(){
   const grid=document.getElementById('adic-slides-grid');
