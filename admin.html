@@ -196,7 +196,7 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 #crop-modal.open{display:flex;}
 .crop-header{width:100%;max-width:500px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(255,255,255,.05);border-radius:12px 12px 0 0;}
 .crop-title{color:#fff;font-size:14px;font-weight:600;}
-.crop-frame-wrap{position:relative;width:360px;height:216px;overflow:hidden;background:#111;cursor:grab;border:2px solid var(--gold);border-radius:4px;user-select:none;}
+.crop-frame-wrap{position:relative;width:360px;height:240px;overflow:hidden;background:#111;cursor:grab;border:2px solid var(--gold);border-radius:4px;user-select:none;}
 .crop-frame-wrap:active{cursor:grabbing;}
 #crop-img-el{position:absolute;transform-origin:0 0;pointer-events:none;touch-action:none;}
 .crop-controls{display:flex;align-items:center;gap:12px;padding:12px 0;}
@@ -724,6 +724,9 @@ let cfg={}, pendingPhotos={}, pendingSlides={}, pendingAdicSlides={}, defaultPho
 function loadAll(){
   let stored={};
   try{stored=JSON.parse(localStorage.getItem(SK))||{};}catch{}
+  try{const bs=localStorage.getItem('rocketBarSlides');if(bs)stored.barSlides=JSON.parse(bs);}catch(e){}
+  try{const as_=localStorage.getItem('rocketAdicSlides');if(as_)stored.adicSlides=JSON.parse(as_);}catch(e){}
+  try{const dp=localStorage.getItem('rocketDrinkPhotos');if(dp){const ph=JSON.parse(dp);if(!stored.drinks)stored.drinks={};Object.keys(ph).forEach(id=>{if(!stored.drinks[id])stored.drinks[id]={};stored.drinks[id].foto=ph[id];});}}catch(e){}
   cfg=JSON.parse(JSON.stringify(DEF));
   // Merge
   if(stored.empresa) cfg.empresa=stored.empresa;
@@ -1350,7 +1353,7 @@ function initAdicItemDrag(){
 var _cropTarget=null;
 var _cx=0,_cy=0,_cscale=1,_cMinScale=1;
 var _cdragging=false,_cdx=0,_cdy=0;
-var _cFrameW=360,_cFrameH=216;
+var _cFrameW=360,_cFrameH=240;
 
 function openCropModal(type,idx){
   _cropTarget={type:type,idx:idx};
@@ -1447,10 +1450,12 @@ function _cropApplyTransform(){
 function saveCrop(){
   var img=document.getElementById('crop-img-el');
   var canvas=document.createElement('canvas');
-  canvas.width=_cFrameW;canvas.height=_cFrameH;
+  var EXP=2;
+  canvas.width=_cFrameW*EXP;canvas.height=_cFrameH*EXP;
   var ctx=canvas.getContext('2d');
+  ctx.scale(EXP,EXP);
   ctx.drawImage(img,_cx,_cy,img.naturalWidth*_cscale,img.naturalHeight*_cscale);
-  var croppedSrc=canvas.toDataURL('image/jpeg',0.85);
+  var croppedSrc=canvas.toDataURL('image/jpeg',0.88);
   if(_cropTarget.type==='bar'){
     cfg.barSlides[_cropTarget.idx]=croppedSrc;
     pendingSlides[_cropTarget.idx]=croppedSrc;
@@ -1598,7 +1603,15 @@ function save(){
       cfg.equipe=equipeData;
     }
 
-    localStorage.setItem(SK,JSON.stringify(ov));
+    const ovSlim=JSON.parse(JSON.stringify(ov));
+    localStorage.setItem('rocketBarSlides',JSON.stringify(ovSlim.barSlides||[]));
+    delete ovSlim.barSlides;
+    localStorage.setItem('rocketAdicSlides',JSON.stringify(ovSlim.adicSlides||[]));
+    delete ovSlim.adicSlides;
+    const drinkPhotos={};
+    if(ovSlim.drinks){Object.keys(ovSlim.drinks).forEach(id=>{if(ovSlim.drinks[id]&&ovSlim.drinks[id].foto){drinkPhotos[id]=ovSlim.drinks[id].foto;delete ovSlim.drinks[id].foto;}});}
+    localStorage.setItem('rocketDrinkPhotos',JSON.stringify(drinkPhotos));
+    localStorage.setItem(SK,JSON.stringify(ovSlim));
     Object.keys(pendingPhotos).forEach(id=>{if(cfg.drinks[id])cfg.drinks[id].foto=pendingPhotos[id];});
     pendingPhotos={};pendingSlides={};pendingAdicSlides={};
     markClean();toast('✓ Salvo com sucesso!','var(--ok)');
@@ -1674,6 +1687,9 @@ async function doPublicar(){
       throw new Error('Token inválido ou sem permissão. Clique em Publicar novamente para configurar.');
     }
     const ov=JSON.parse(stored);
+    try{const bs=localStorage.getItem('rocketBarSlides');if(bs){const imgs=JSON.parse(bs);if(!ov.barSlides)ov.barSlides=imgs;else imgs.forEach((v,i)=>{if(v)ov.barSlides[i]=v;});}}catch(e){}
+    try{const as_=localStorage.getItem('rocketAdicSlides');if(as_){const imgs=JSON.parse(as_);if(!ov.adicSlides)ov.adicSlides=imgs;else imgs.forEach((v,i)=>{if(v)ov.adicSlides[i]=v;});}}catch(e){}
+    try{const dp=localStorage.getItem('rocketDrinkPhotos');if(dp){const ph=JSON.parse(dp);if(!ov.drinks)ov.drinks={};Object.keys(ph).forEach(id=>{if(!ov.drinks[id])ov.drinks[id]={};if(!ov.drinks[id].foto||ov.drinks[id].foto.startsWith('data:'))ov.drinks[id].foto=ph[id];});}}catch(e){}
     async function ghPut(path,base64Content,msg){
       const url=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/${path}`;
       const headers={'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
@@ -1723,7 +1739,14 @@ async function doPublicar(){
     pb.textContent='⏳ Salvando configuração...';
     const configBase64=btoa(unescape(encodeURIComponent(JSON.stringify(ov))));
     await ghPut('rocket-config.json',configBase64,'Config via admin Rocket Drinks');
-    localStorage.setItem(SK,JSON.stringify(ov));
+    localStorage.setItem('rocketBarSlides',JSON.stringify(ov.barSlides||[]));
+    localStorage.setItem('rocketAdicSlides',JSON.stringify(ov.adicSlides||[]));
+    var _pp={};
+    if(ov.drinks)Object.keys(ov.drinks).forEach(function(id){if(ov.drinks[id]&&ov.drinks[id].foto)_pp[id]=ov.drinks[id].foto;});
+    localStorage.setItem('rocketDrinkPhotos',JSON.stringify(_pp));
+    var _os=JSON.parse(JSON.stringify(ov));delete _os.barSlides;delete _os.adicSlides;
+    if(_os.drinks)Object.keys(_os.drinks).forEach(function(id){if(_os.drinks[id])delete _os.drinks[id].foto;});
+    localStorage.setItem(SK,JSON.stringify(_os));
     const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) enviada(s). Aguarde ~1 min.`:'✅ Configuração publicada! Aguarde ~1 min.';
     toast(msg,'var(--ok)');
   }catch(e){
