@@ -1901,7 +1901,7 @@ const CONFIG = {
 // =========================================================
 (function applyAdminOverrides() {
   try {
-    const stored = localStorage.getItem('rocketDrinksConfig');
+    const stored = (typeof window.__ADMIN_CFG__ !== 'undefined' ? JSON.stringify(window.__ADMIN_CFG__) : null) || localStorage.getItem('rocketDrinksConfig');
     if (!stored) return;
     const ov = JSON.parse(stored);
     if (!ov) return;
