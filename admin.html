@@ -1663,30 +1663,75 @@ async function doPublicar(){
   const stored=localStorage.getItem(SK);
   if(!stored){toast('⚠ Salve primeiro!','var(--danger)');return;}
   const token=getGhToken();
+  if(!token){openGhTokenModal();return;}
   const pb=document.getElementById('pbtn');
   pb.disabled=true;pb.textContent='⏳ Publicando...';
   try{
+    // Verify token first
+    const verResp=await fetch(`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}`,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    if(!verResp.ok){
+      localStorage.removeItem(GH_TOKEN_KEY);
+      throw new Error('Token inválido ou sem permissão. Clique em Publicar novamente para configurar.');
+    }
     const ov=JSON.parse(stored);
-    const shaResp=await fetch(`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/${GH_FILE_PATH}`,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
-    if(!shaResp.ok){if(shaResp.status===401){localStorage.removeItem(GH_TOKEN_KEY);throw new Error('Token inválido. Clique em Publicar novamente para configurar.');}throw new Error('Erro ao acessar GitHub: '+shaResp.status);}
-    const shaData=await shaResp.json();
-    const currentSha=shaData.sha;
-    pb.textContent='⏳ Baixando arquivo...';
-    const rawResp=await fetch(`https://raw.githubusercontent.com/${GH_REPO_OWNER}/${GH_REPO_NAME}/main/${GH_FILE_PATH}?t=${Date.now()}`);
-    if(!rawResp.ok)throw new Error('Erro ao baixar arquivo do GitHub');
-    let html=await rawResp.text();
-    const scriptTag=`<script>window.__ADMIN_CFG__=${JSON.stringify(ov)};<\/script>`;
-    html=html.replace(/<script>window\.__ADMIN_CFG__[\s\S]*?<\/script>\n?/,'');
-    html=html.replace('<head>','<head>\n'+scriptTag);
-    pb.textContent='⏳ Enviando para o GitHub...';
-    const encoded=btoa(unescape(encodeURIComponent(html)));
-    const putResp=await fetch(`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/${GH_FILE_PATH}`,{method:'PUT',headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify({message:'Atualização via admin Rocket Drinks',content:encoded,sha:currentSha})});
-    if(!putResp.ok){const err=await putResp.json();throw new Error('Erro no GitHub: '+(err.message||putResp.status));}
-    toast('✅ Site atualizado! Aguarde ~1 min para o deploy.','var(--ok)');
-  }catch(e){console.error(e);toast('⚠ '+e.message,'var(--danger)');}
+    async function ghPut(path,base64Content,msg){
+      const url=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/${path}`;
+      const headers={'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
+      let sha;
+      const existing=await fetch(url,{headers});
+      if(existing.ok){const d=await existing.json();sha=d.sha;}
+      else if(existing.status!==404){throw new Error('Erro GitHub '+existing.status+' ao verificar '+path);}
+      const body={message:msg||'Admin update',content:base64Content};
+      if(sha)body.sha=sha;
+      const r=await fetch(url,{method:'PUT',headers,body:JSON.stringify(body)});
+      if(!r.ok){const e=await r.json();throw new Error('Erro ao salvar '+path+': '+(e.message||r.status));}
+    }
+    async function uploadImg(dataUrl,path){
+      if(!dataUrl||!dataUrl.startsWith('data:'))return dataUrl;
+      const base64=dataUrl.split(',')[1];
+      await ghPut(path,base64,'Imagem via admin Rocket Drinks');
+      return `https://raw.githubusercontent.com/${GH_REPO_OWNER}/${GH_REPO_NAME}/main/${path}`;
+    }
+    let imgCount=0;
+    if(ov.barSlides){
+      for(let i=0;i<ov.barSlides.length;i++){
+        if(ov.barSlides[i]&&ov.barSlides[i].startsWith('data:')){
+          pb.textContent=`⏳ Foto bar ${i+1}/${ov.barSlides.length}...`;
+          ov.barSlides[i]=await uploadImg(ov.barSlides[i],`images/bar-${i}.jpg`);
+          imgCount++;
+        }
+      }
+    }
+    if(ov.adicSlides){
+      for(let i=0;i<ov.adicSlides.length;i++){
+        if(ov.adicSlides[i]&&ov.adicSlides[i].startsWith('data:')){
+          pb.textContent=`⏳ Foto adicional ${i+1}/${ov.adicSlides.length}...`;
+          ov.adicSlides[i]=await uploadImg(ov.adicSlides[i],`images/adicional-${i}.jpg`);
+          imgCount++;
+        }
+      }
+    }
+    if(ov.drinks){
+      for(const id of Object.keys(ov.drinks)){
+        if(ov.drinks[id]&&ov.drinks[id].foto&&ov.drinks[id].foto.startsWith('data:')){
+          pb.textContent=`⏳ Foto drink ${id}...`;
+          ov.drinks[id].foto=await uploadImg(ov.drinks[id].foto,`images/drink-${id}.jpg`);
+          imgCount++;
+        }
+      }
+    }
+    pb.textContent='⏳ Salvando configuração...';
+    const configBase64=btoa(unescape(encodeURIComponent(JSON.stringify(ov))));
+    await ghPut('rocket-config.json',configBase64,'Config via admin Rocket Drinks');
+    localStorage.setItem(SK,JSON.stringify(ov));
+    const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) enviada(s). Aguarde ~1 min.`:'✅ Configuração publicada! Aguarde ~1 min.';
+    toast(msg,'var(--ok)');
+  }catch(e){
+    console.error(e);
+    toast('⚠ '+e.message,'var(--danger)');
+  }
   pb.disabled=false;pb.textContent='🚀 Publicar no Site';
 }
-
 // ── ADICIONAIS SLIDES ────────────────────────
 function renderAdicSlides(){
   const grid=document.getElementById('adic-slides-grid');
