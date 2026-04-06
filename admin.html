@@ -1773,7 +1773,7 @@ async function doPublicar(){
     var _pp={};
     if(ov.drinks)Object.keys(ov.drinks).forEach(function(id){if(ov.drinks[id]&&ov.drinks[id].foto)_pp[id]=ov.drinks[id].foto;});
     localStorage.setItem('rocketDrinkPhotos',JSON.stringify(_pp));
-    var _os=JSON.parse(JSON.stringify(ov));delete _os.barSlides;delete _os.adicSlides;
+    var _os=JSON.parse(JSON.stringify(ov));
     if(_os.drinks)Object.keys(_os.drinks).forEach(function(id){if(_os.drinks[id])delete _os.drinks[id].foto;});
     localStorage.setItem(SK,JSON.stringify(_os));
     const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) enviada(s). Aguarde ~1 min.`:'✅ Configuração publicada! Aguarde ~1 min.';
