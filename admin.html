@@ -1829,11 +1829,12 @@ function handleAdicSlide(inp,i){
   if(!inp.files||!inp.files[0])return;
   const r=new FileReader();
   r.onload=function(e){
-    const url=e.target.result;
-    pendingAdicSlides[i]=url;
-    cfg.adicSlides[i]=url;
-    dirty();
-    renderAdicSlides();
+    _compressImg(e.target.result,1440,1080,0.78,function(compressed){
+      pendingAdicSlides[i]=compressed;
+      cfg.adicSlides[i]=compressed;
+      dirty();
+      renderAdicSlides();
+    });
   };
   r.readAsDataURL(inp.files[0]);
 }
