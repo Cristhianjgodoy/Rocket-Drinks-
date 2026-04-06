@@ -984,7 +984,7 @@ function handleDrinkPhoto(inp,id){
   if(!inp.files||!inp.files[0])return;
   const r=new FileReader();
   r.onload=e=>{
-    const url=e.target.result;
+    _compressImg(e.target.result,1200,1200,0.78,function(url){
     pendingPhotos[id]=url;
     if(cfg.drinks[id]) cfg.drinks[id].foto=url;
     // thumb update
@@ -998,7 +998,6 @@ function handleDrinkPhoto(inp,id){
     }
     const t=document.getElementById('dprevtxt-'+id);
     if(t)t.innerHTML='<span>Clique para trocar a foto</span>';
-    // show restore button if not yet present
     const defD=DEF.drinks&&DEF.drinks[id];
     if(defD&&url!==defD.foto){
       let rb=document.getElementById('drestore-'+id);
@@ -1008,6 +1007,7 @@ function handleDrinkPhoto(inp,id){
       }
     }
     dirty();
+    });
   };
   r.readAsDataURL(inp.files[0]);
 }
@@ -1059,11 +1059,12 @@ function handleSlide(inp,i){
   if(!inp.files||!inp.files[0])return;
   const r=new FileReader();
   r.onload=e=>{
-    const url=e.target.result;
-    pendingSlides[i]=url;
-    cfg.barSlides[i]=url;
-    dirty();
-    renderSlides();
+    _compressImg(e.target.result,1440,1080,0.78,function(compressed){
+      pendingSlides[i]=compressed;
+      cfg.barSlides[i]=compressed;
+      dirty();
+      renderSlides();
+    });
   };
   r.readAsDataURL(inp.files[0]);
 }
@@ -1287,6 +1288,21 @@ function showPlan(plan,btn){
 // ── DIRTY / CLEAN ───────────────────────────
 
 // ── DRAG AND DROP — SLIDES ───────────────────
+
+// ── AUTO-COMPRESS ON UPLOAD ──────────────────
+function _compressImg(src,maxW,maxH,q,cb){
+  var img=new Image();
+  img.onload=function(){
+    var w=img.width,h=img.height;
+    var scale=Math.min(1,maxW/w,maxH/h);
+    var cw=Math.round(w*scale),ch=Math.round(h*scale);
+    var c=document.createElement('canvas');c.width=cw;c.height=ch;
+    c.getContext('2d').drawImage(img,0,0,cw,ch);
+    cb(c.toDataURL('image/jpeg',q||0.78));
+  };
+  img.onerror=function(){cb(src);};
+  img.src=src;
+}
 var _dragSrcIdx=null, _dragSrcType=null;
 function _addSlidesDragEvents(cell){
   cell.addEventListener('dragstart',function(e){
@@ -1455,7 +1471,7 @@ function saveCrop(){
   var ctx=canvas.getContext('2d');
   ctx.scale(EXP,EXP);
   ctx.drawImage(img,_cx,_cy,img.naturalWidth*_cscale,img.naturalHeight*_cscale);
-  var croppedSrc=canvas.toDataURL('image/jpeg',0.88);
+  var croppedSrc=canvas.toDataURL('image/jpeg',0.80);
   if(_cropTarget.type==='bar'){
     cfg.barSlides[_cropTarget.idx]=croppedSrc;
     pendingSlides[_cropTarget.idx]=croppedSrc;
@@ -1604,13 +1620,26 @@ function save(){
     }
 
     const ovSlim=JSON.parse(JSON.stringify(ov));
-    localStorage.setItem('rocketBarSlides',JSON.stringify(ovSlim.barSlides||[]));
+    // Safe localStorage save with quota handling
+    function _safeSave(key, arr){
+      try{ localStorage.setItem(key, JSON.stringify(arr)); }
+      catch(e){
+        // Quota exceeded: compress base64 images further
+        const smaller=arr.map(v=>{
+          if(!v||!v.startsWith('data:'))return v;
+          return v; // keep URLs as-is; base64 already compressed on load
+        });
+        try{ localStorage.setItem(key, JSON.stringify(smaller)); }
+        catch(e2){ toast('⚠ Armazenamento cheio. Publique antes de adicionar mais fotos.','var(--danger)'); throw e2; }
+      }
+    }
+    _safeSave('rocketBarSlides', ovSlim.barSlides||[]);
     delete ovSlim.barSlides;
-    localStorage.setItem('rocketAdicSlides',JSON.stringify(ovSlim.adicSlides||[]));
+    _safeSave('rocketAdicSlides', ovSlim.adicSlides||[]);
     delete ovSlim.adicSlides;
     const drinkPhotos={};
     if(ovSlim.drinks){Object.keys(ovSlim.drinks).forEach(id=>{if(ovSlim.drinks[id]&&ovSlim.drinks[id].foto){drinkPhotos[id]=ovSlim.drinks[id].foto;delete ovSlim.drinks[id].foto;}});}
-    localStorage.setItem('rocketDrinkPhotos',JSON.stringify(drinkPhotos));
+    try{ localStorage.setItem('rocketDrinkPhotos',JSON.stringify(drinkPhotos)); }catch(e){}
     localStorage.setItem(SK,JSON.stringify(ovSlim));
     Object.keys(pendingPhotos).forEach(id=>{if(cfg.drinks[id])cfg.drinks[id].foto=pendingPhotos[id];});
     pendingPhotos={};pendingSlides={};pendingAdicSlides={};
