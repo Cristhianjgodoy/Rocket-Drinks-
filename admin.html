@@ -196,7 +196,7 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 #crop-modal.open{display:flex;}
 .crop-header{width:100%;max-width:500px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(255,255,255,.05);border-radius:12px 12px 0 0;}
 .crop-title{color:#fff;font-size:14px;font-weight:600;}
-.crop-frame-wrap{position:relative;width:360px;height:240px;overflow:hidden;background:#111;cursor:grab;border:2px solid var(--gold);border-radius:4px;user-select:none;}
+.crop-frame-wrap{position:relative;width:360px;height:300px;overflow:hidden;background:#111;cursor:grab;border:2px solid var(--gold);border-radius:4px;user-select:none;}
 .crop-frame-wrap:active{cursor:grabbing;}
 #crop-img-el{position:absolute;transform-origin:0 0;pointer-events:none;touch-action:none;}
 .crop-controls{display:flex;align-items:center;gap:12px;padding:12px 0;}
@@ -1353,7 +1353,7 @@ function initAdicItemDrag(){
 var _cropTarget=null;
 var _cx=0,_cy=0,_cscale=1,_cMinScale=1;
 var _cdragging=false,_cdx=0,_cdy=0;
-var _cFrameW=360,_cFrameH=240;
+var _cFrameW=360,_cFrameH=300;
 
 function openCropModal(type,idx){
   _cropTarget={type:type,idx:idx};
@@ -1706,7 +1706,7 @@ async function doPublicar(){
       if(!dataUrl||!dataUrl.startsWith('data:'))return dataUrl;
       const base64=dataUrl.split(',')[1];
       await ghPut(path,base64,'Imagem via admin Rocket Drinks');
-      return `https://raw.githubusercontent.com/${GH_REPO_OWNER}/${GH_REPO_NAME}/main/${path}`;
+      return `https://raw.githubusercontent.com/${GH_REPO_OWNER}/${GH_REPO_NAME}/main/${path}?v=${Date.now()}`;
     }
     let imgCount=0;
     if(ov.barSlides){
