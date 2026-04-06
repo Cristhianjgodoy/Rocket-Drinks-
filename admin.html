@@ -1466,7 +1466,7 @@ function _cropApplyTransform(){
 function saveCrop(){
   var img=document.getElementById('crop-img-el');
   var canvas=document.createElement('canvas');
-  var EXP=2;
+  var EXP=4;
   canvas.width=_cFrameW*EXP;canvas.height=_cFrameH*EXP;
   var ctx=canvas.getContext('2d');
   ctx.scale(EXP,EXP);
