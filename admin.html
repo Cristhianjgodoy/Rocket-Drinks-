@@ -1778,6 +1778,7 @@ async function doPublicar(){
     localStorage.setItem(SK,JSON.stringify(_os));
     const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) enviada(s). Aguarde ~1 min.`:'✅ Configuração publicada! Aguarde ~1 min.';
     toast(msg,'var(--ok)');
+    localStorage.setItem('rocketConfigTs','0');
   }catch(e){
     console.error(e);
     toast('⚠ '+e.message,'var(--danger)');
