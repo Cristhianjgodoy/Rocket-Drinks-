@@ -1460,7 +1460,26 @@ function _cropConstrain(iw,ih){
 function _cropApplyTransform(){
   var img=document.getElementById('crop-img-el');
   img.style.transform='translate('+_cx+'px,'+_cy+'px) scale('+_cscale+')';
-  document.getElementById('crop-zoom-label').textContent=Math.round(_cscale/_cMinScale*100)+'%';
+  var pct=Math.round(_cscale/_cMinScale*100);
+  document.getElementById('crop-zoom-label').textContent=pct+'%';
+  var _zi=document.getElementById('crop-zoom-input');
+  if(_zi)_zi.value=pct;
+}
+
+function cropZoomToValue(pct){
+  if(isNaN(pct)||pct<20)pct=20;
+  if(pct>500)pct=500;
+  var img=document.getElementById('crop-img-el');
+  var iw=img.naturalWidth,ih=img.naturalHeight;
+  var targetScale=_cMinScale*(pct/100);
+  var oldScale=_cscale;
+  _cscale=Math.max(_cMinScale,Math.min(targetScale,5));
+  var cx=_cFrameW/2,cy=_cFrameH/2;
+  var ratio=_cscale/oldScale;
+  _cx=cx+(_cx-cx)*ratio;
+  _cy=cy+(_cy-cy)*ratio;
+  _cropConstrain(iw,ih);
+  _cropApplyTransform();
 }
 
 function saveCrop(){
@@ -2018,11 +2037,19 @@ window.addEventListener('load',()=>{
     <img id="crop-img-el" draggable="false">
   </div>
   <div class="crop-controls">
-    <button class="crop-zoom-btn" onclick="cropZoom(-0.15)">−</button>
-    <span class="crop-zoom-label" id="crop-zoom-label">100%</span>
-    <button class="crop-zoom-btn" onclick="cropZoom(0.15)">+</button>
+    <button class="crop-zoom-btn" onclick="cropZoom(-0.25)" title="−25%">−−</button>
+    <button class="crop-zoom-btn" onclick="cropZoom(-0.05)" title="−5%">−</button>
+    <input type="number" id="crop-zoom-input" min="20" max="500" value="100" step="5"
+      style="width:70px;text-align:center;font-size:14px;padding:4px 6px;border:1px solid #888;border-radius:6px;background:#222;color:#fff;"
+      onchange="cropZoomToValue(parseFloat(this.value))"
+      oninput="cropZoomToValue(parseFloat(this.value))"
+      title="Digite o zoom (%)">
+    <span id="crop-zoom-label" style="display:none">100%</span>
+    <span style="color:#ccc;font-size:13px;">%</span>
+    <button class="crop-zoom-btn" onclick="cropZoom(0.05)" title="+5%">+</button>
+    <button class="crop-zoom-btn" onclick="cropZoom(0.25)" title="+25%">++</button>
   </div>
-  <div class="crop-hint">Scroll do mouse também aumenta/diminui o zoom</div>
+  <div class="crop-hint">Scroll para zoom • Arraste para mover • Digite % para zoom preciso</div>
   <div class="crop-footer">
     <button class="btn-crop-cancel" onclick="closeCropModal()">Cancelar</button>
     <button class="btn-crop-save" onclick="saveCrop()">✓ Salvar enquadramento</button>
