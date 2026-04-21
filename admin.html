@@ -290,6 +290,10 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
         <input class="fi" id="cfg-fund" oninput="dirty()"></div>
       <div class="fg"><label class="fl">WhatsApp de Atendimento (DDI+DDD+número)</label>
         <input class="fi" id="cfg-wpp" placeholder="Ex: 5551999999999" oninput="dirty()"></div>
+      <div class="fg"><label class="fl">🔗 URL Google Apps Script (Captura de Leads)</label>
+        <input class="fi" id="cfg-leads-url" placeholder="https://script.google.com/macros/s/..." oninput="dirty()" style="font-size:12px">
+        <span style="font-size:11px;color:#888;display:block;margin-top:4px;">Cole aqui a URL do Web App do Google Apps Script para registrar leads na planilha.</span>
+      </div>
     </div>
 
     <!-- ── PLANOS ──────────────────────────────── -->
@@ -732,6 +736,7 @@ function loadAll(){
   if(stored.empresa) cfg.empresa=stored.empresa;
   if(stored.fundador) cfg.fundador=stored.fundador;
   if(stored.whatsapp) cfg.whatsapp=stored.whatsapp;
+  if(stored.leadsScriptUrl) cfg.leadsScriptUrl=stored.leadsScriptUrl;
   ['bronze','silver','gold'].forEach(p=>{
     if(stored.planos&&stored.planos[p]) Object.assign(cfg.planos[p],stored.planos[p]);
   });
@@ -753,6 +758,7 @@ function loadAll(){
   document.getElementById('cfg-emp').value=cfg.empresa;
   document.getElementById('cfg-fund').value=cfg.fundador;
   document.getElementById('cfg-wpp').value=cfg.whatsapp;
+  document.getElementById('cfg-leads-url').value=cfg.leadsScriptUrl||'';
 
   // Populate Planos
   ['bronze','silver','gold'].forEach(p=>{
@@ -1539,6 +1545,7 @@ function save(){
       empresa:document.getElementById('cfg-emp').value.trim(),
       fundador:document.getElementById('cfg-fund').value.trim(),
       whatsapp:document.getElementById('cfg-wpp').value.trim(),
+      leadsScriptUrl:document.getElementById('cfg-leads-url').value.trim(),
       planos:{},drinks:{},
       barSlides:cfg.barSlides.slice(),
       barModels:[],
