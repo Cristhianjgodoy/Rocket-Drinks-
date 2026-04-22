@@ -2301,18 +2301,25 @@ function updateClientPhone() {
 function _enviarParaSheets(status) {
   try {
     var url = (CONFIG && CONFIG.leadsScriptUrl) ? CONFIG.leadsScriptUrl.trim() : '';
-    if (!url || !window._leadData || !window._leadData.nome) return;
+    // usa _leadData se disponível, senão cai no state direto
+    var nome     = (window._leadData && window._leadData.nome)     ? window._leadData.nome     : (state.clientName  || '');
+    var whatsapp = (window._leadData && window._leadData.whatsapp) ? window._leadData.whatsapp : (state.clientPhone || '');
+    if (!url || !nome) return;
     var payload = JSON.stringify({
-      nome:     window._leadData.nome || '',
-      whatsapp: window._leadData.whatsapp || '',
-      status:   status || 'Lead',
+      nome:      nome,
+      whatsapp:  whatsapp,
+      status:    status || 'Lead',
       timestamp: new Date().toISOString()
     });
     fetch(url, { method:'POST', mode:'no-cors', body:payload }).catch(function(){});
   } catch(e) {}
 }
 
-function captureLeadToSheets() { _enviarParaSheets('Lead'); }
+function captureLeadToSheets() {
+  if (window._leadCapturado) return; // evita duplicatas
+  window._leadCapturado = true;
+  _enviarParaSheets('Lead');
+}
 
 // =========================================================
 //  STEP 2 — OCASIÃO + CONVIDADOS
@@ -3122,6 +3129,7 @@ function reiniciar() {
   // Limpa dados de lead ao reiniciar o fluxo
   window._leadData = null;
   window._whatsappEnviado = false;
+  window._leadCapturado = false;
   Object.assign(state, {
     step:1, clientName:'', clientPhone:'', occasion:'', guests:0, guestsLabel:'',
     plan:'', planLabel:'', barOption:'', barStructure:'',
