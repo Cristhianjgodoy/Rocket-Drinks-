@@ -2097,12 +2097,11 @@ window.addEventListener('DOMContentLoaded', () => {
 // =========================================================
 function goTo(n) {
   if (n > state.step && !validateStep(state.step)) return;
-  // Guarda dados do lead ao sair do step 1 (sem enviar ainda — só envia se não mandar pelo WhatsApp)
+  // Captura lead imediatamente ao avançar do step 1 — mais confiável que beforeunload/timer
   if (state.step === 1 && n === 2) {
     window._leadData = { nome: state.clientName, whatsapp: state.clientPhone };
     window._whatsappEnviado = false;
-    window._leadJaEnviado = false;
-    _iniciarTimerLead();
+    captureLeadToSheets(); // envia como "Lead" imediatamente
   }
   document.getElementById('step-' + state.step).classList.remove('active');
   state.step = n;
@@ -2299,42 +2298,21 @@ function updateClientPhone() {
 // =========================================================
 //  LEAD CAPTURE — Google Sheets via Apps Script
 // =========================================================
-function captureLeadToSheets() {
+function _enviarParaSheets(status) {
   try {
-    if (window._leadJaEnviado) return; // evita duplicatas
     var url = (CONFIG && CONFIG.leadsScriptUrl) ? CONFIG.leadsScriptUrl.trim() : '';
     if (!url || !window._leadData || !window._leadData.nome) return;
     var payload = JSON.stringify({
-      nome: window._leadData.nome || '',
+      nome:     window._leadData.nome || '',
       whatsapp: window._leadData.whatsapp || '',
+      status:   status || 'Lead',
       timestamp: new Date().toISOString()
     });
-    window._leadJaEnviado = true;
-    // text/plain evita CORS preflight — Apps Script lê e.postData.contents normalmente
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(url, new Blob([payload], {type:'text/plain'}));
-    }
-    // Fallback fetch no-cors (para quando sendBeacon não está disponível ou falha)
     fetch(url, { method:'POST', mode:'no-cors', body:payload }).catch(function(){});
   } catch(e) {}
 }
 
-// Backup 1: Timer de 45s — captura quem ficou parado sem enviar
-function _iniciarTimerLead() {
-  clearTimeout(window._leadTimer);
-  window._leadTimer = setTimeout(function() {
-    if (!window._whatsappEnviado && window._leadData && window._leadData.nome) {
-      captureLeadToSheets();
-    }
-  }, 45000);
-}
-
-// Backup 2: beforeunload — captura quem fecha/sai rapidamente
-window.addEventListener('beforeunload', function() {
-  if (!window._whatsappEnviado && window._leadData && window._leadData.nome) {
-    captureLeadToSheets();
-  }
-});
+function captureLeadToSheets() { _enviarParaSheets('Lead'); }
 
 // =========================================================
 //  STEP 2 — OCASIÃO + CONVIDADOS
@@ -3130,10 +3108,9 @@ function enviarWhatsApp() {
   msg += `────────────────────\n`;
   msg += `_Orçamento gerado via Rocket Drinks_`;
 
-  // Marca que o orçamento foi enviado — NÃO deve ser capturado como lead
+  // Marca como Convertido na planilha — assim distingue de quem não enviou
   window._whatsappEnviado = true;
-  window._leadData = null;
-  clearTimeout(window._leadTimer);
+  _enviarParaSheets('Convertido');
 
   window.open('https://wa.me/' + CONFIG.whatsapp + '?text=' + encodeURIComponent(msg), '_blank');
 }
@@ -3145,8 +3122,6 @@ function reiniciar() {
   // Limpa dados de lead ao reiniciar o fluxo
   window._leadData = null;
   window._whatsappEnviado = false;
-  window._leadJaEnviado = false;
-  clearTimeout(window._leadTimer);
   Object.assign(state, {
     step:1, clientName:'', clientPhone:'', occasion:'', guests:0, guestsLabel:'',
     plan:'', planLabel:'', barOption:'', barStructure:'',
