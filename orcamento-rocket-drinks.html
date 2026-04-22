@@ -2101,6 +2101,8 @@ function goTo(n) {
   if (state.step === 1 && n === 2) {
     window._leadData = { nome: state.clientName, whatsapp: state.clientPhone };
     window._whatsappEnviado = false;
+    window._leadJaEnviado = false;
+    _iniciarTimerLead();
   }
   document.getElementById('step-' + state.step).classList.remove('active');
   state.step = n;
@@ -2298,26 +2300,36 @@ function updateClientPhone() {
 //  LEAD CAPTURE — Google Sheets via Apps Script
 // =========================================================
 function captureLeadToSheets() {
-  // Envia lead para Google Sheets via sendBeacon (funciona mesmo no unload)
   try {
+    if (window._leadJaEnviado) return; // evita duplicatas
     var url = (CONFIG && CONFIG.leadsScriptUrl) ? CONFIG.leadsScriptUrl.trim() : '';
-    if (!url || !window._leadData) return;
+    if (!url || !window._leadData || !window._leadData.nome) return;
     var payload = JSON.stringify({
       nome: window._leadData.nome || '',
       whatsapp: window._leadData.whatsapp || '',
       timestamp: new Date().toISOString()
     });
-    // sendBeacon: funciona mesmo quando a página está sendo fechada
+    window._leadJaEnviado = true;
+    // text/plain evita CORS preflight — Apps Script lê e.postData.contents normalmente
     if (navigator.sendBeacon) {
-      navigator.sendBeacon(url, new Blob([payload], {type:'application/json'}));
-    } else {
-      // Fallback para browsers antigos
-      fetch(url, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:payload }).catch(function(){});
+      navigator.sendBeacon(url, new Blob([payload], {type:'text/plain'}));
     }
+    // Fallback fetch no-cors (para quando sendBeacon não está disponível ou falha)
+    fetch(url, { method:'POST', mode:'no-cors', body:payload }).catch(function(){});
   } catch(e) {}
 }
 
-// Captura lead ao sair da página sem ter enviado pelo WhatsApp
+// Backup 1: Timer de 45s — captura quem ficou parado sem enviar
+function _iniciarTimerLead() {
+  clearTimeout(window._leadTimer);
+  window._leadTimer = setTimeout(function() {
+    if (!window._whatsappEnviado && window._leadData && window._leadData.nome) {
+      captureLeadToSheets();
+    }
+  }, 45000);
+}
+
+// Backup 2: beforeunload — captura quem fecha/sai rapidamente
 window.addEventListener('beforeunload', function() {
   if (!window._whatsappEnviado && window._leadData && window._leadData.nome) {
     captureLeadToSheets();
@@ -3121,6 +3133,7 @@ function enviarWhatsApp() {
   // Marca que o orçamento foi enviado — NÃO deve ser capturado como lead
   window._whatsappEnviado = true;
   window._leadData = null;
+  clearTimeout(window._leadTimer);
 
   window.open('https://wa.me/' + CONFIG.whatsapp + '?text=' + encodeURIComponent(msg), '_blank');
 }
@@ -3132,6 +3145,8 @@ function reiniciar() {
   // Limpa dados de lead ao reiniciar o fluxo
   window._leadData = null;
   window._whatsappEnviado = false;
+  window._leadJaEnviado = false;
+  clearTimeout(window._leadTimer);
   Object.assign(state, {
     step:1, clientName:'', clientPhone:'', occasion:'', guests:0, guestsLabel:'',
     plan:'', planLabel:'', barOption:'', barStructure:'',
