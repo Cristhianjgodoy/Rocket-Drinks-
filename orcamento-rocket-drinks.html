@@ -784,6 +784,69 @@ select option{background:#111;}
 .adm-rec-opt a{color:var(--gold);text-decoration:none;font-size:11px;margin-left:auto;}
 .adm-rec-opt a:hover{text-decoration:underline;}
 
+/* ── GUEST SELECTOR PER PLAN ── */
+.plan-guest-bar{
+  background:rgba(201,168,76,0.06);
+  border-top:1px solid rgba(201,168,76,0.15);
+  border-bottom:1px solid rgba(201,168,76,0.15);
+  padding:12px 16px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.plan-guest-bar .pgb-label{
+  font-size:11px;
+  font-weight:700;
+  color:rgba(255,255,255,0.5);
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.plan-guest-select{
+  flex:1;
+  min-width:160px;
+  background:#1a1a1a;
+  border:1px solid rgba(201,168,76,0.35);
+  border-radius:8px;
+  color:#f0f0f0;
+  font-size:12px;
+  padding:8px 10px;
+  outline:none;
+  cursor:pointer;
+  font-family:inherit;
+}
+.plan-guest-select:focus{border-color:var(--gold);}
+.plan-ppp-display{
+  font-size:11px;
+  color:var(--gold);
+  font-weight:700;
+  white-space:nowrap;
+  flex-shrink:0;
+  display:none;
+}
+.plan-ppp-display.visible{display:block;}
+
+/* ── FAIXA SELECTOR (pills) ── */
+.pfs-wrap{padding:14px 16px;border-top:1px solid rgba(201,168,76,.15);border-bottom:1px solid rgba(201,168,76,.15);background:rgba(0,0,0,.15);}
+.pfs-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.7px;margin-bottom:9px;}
+.pfs-grid{display:flex;flex-wrap:wrap;gap:5px;}
+.pfs-pill{padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(201,168,76,.3);color:rgba(255,255,255,.45);cursor:pointer;transition:all .15s;white-space:nowrap;user-select:none;}
+.pfs-pill:hover{border-color:var(--gold);color:var(--gold);}
+.pfs-pill.sel{background:var(--gold);color:#000;border-color:var(--gold);font-weight:700;}
+.pfs-result{display:none;margin-top:10px;padding:9px 13px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.22);border-radius:8px;font-size:12.5px;color:rgba(255,255,255,.75);}
+.pfs-result.vis{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.pfs-result .ppr{font-size:11px;color:rgba(255,255,255,.45);}
+.pfs-result .ptot{font-size:15px;font-weight:800;color:var(--gold);}
+.pfs-toggle{background:none;border:none;color:rgba(201,168,76,.55);font-size:10.5px;cursor:pointer;margin-top:9px;padding:0;font-family:inherit;text-decoration:underline;text-underline-offset:2px;display:block;}
+.pfs-toggle:hover{color:var(--gold);}
+.pfs-tbl{display:none;margin-top:10px;width:100%;border-collapse:collapse;font-size:11.5px;}
+.pfs-tbl.open{display:table;}
+.pfs-tbl th{color:rgba(255,255,255,.35);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;}
+.pfs-tbl th:last-child,.pfs-tbl td:last-child{text-align:right;}
+.pfs-tbl td{padding:5px 8px;color:rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.04);}
+.pfs-tbl tr.tr-sel td{background:rgba(201,168,76,.12);color:var(--gold);font-weight:700;}
+.pfs-tbl tr:last-child td{border-bottom:none;}
+
 </style>
 </head>
 <body>
@@ -852,46 +915,51 @@ select option{background:#111;}
         <select id="guest-count" onchange="onGuestSelect()">
           <option value="">Selecione a quantidade...</option>
           <option value="50">Até 50 convidados</option>
-          <option value="75">51 – 75 convidados</option>
-          <option value="100">76 – 100 convidados</option>
-          <option value="125">101 – 125 convidados</option>
-          <option value="150">126 – 150 convidados</option>
-          <option value="175">151 – 175 convidados</option>
-          <option value="200">176 – 200 convidados</option>
-          <option value="250">201 – 250 convidados</option>
-          <option value="300">251 – 300 convidados</option>
+          <option value="100">51 – 100 convidados</option>
+          <option value="130">101 – 130 convidados</option>
+          <option value="160">131 – 160 convidados</option>
+          <option value="190">161 – 190 convidados</option>
+          <option value="220">191 – 220 convidados</option>
+          <option value="261">221 – 261 convidados</option>
+          <option value="300">261 – 300 convidados</option>
           <option value="350">301 – 350 convidados</option>
           <option value="400">351 – 400 convidados</option>
           <option value="450">401 – 450 convidados</option>
           <option value="500">451 – 500 convidados</option>
-          <option value="600">501 – 600 convidados</option>
-          <option value="custom">Mais de 600 convidados ✨</option>
+          <option value="custom">Mais de 500 convidados ✨</option>
         </select>
       </div>
     </div>
 
-    <!-- Campo custom para 600+ -->
-    <div class="input-block" id="custom-guests-block" style="display:none;">
-      <label class="input-label">Quantos convidados exatamente?</label>
-      <input type="number" id="custom-guest-input" placeholder="Ex: 750"
-             min="601" oninput="onCustomGuests()" autocomplete="off"/>
-      <div id="custom-guests-warning" style="display:none;margin-top:10px;padding:12px 14px;
-           background:rgba(201,168,76,0.12);border:1px solid var(--border-gold);border-radius:10px;
-           font-size:13px;color:var(--gold);line-height:1.5;">
-        ✨ Para eventos acima de 1.000 convidados, os valores são personalizados.<br>
-        Entre em contato via WhatsApp para um orçamento exclusivo:<br><br>
-        <a href="https://wa.me/5551996753692?text=Olá!%20Gostaria%20de%20um%20orçamento%20para%20evento%20com%20mais%20de%201.000%20convidados."
-           target="_blank"
-           style="display:inline-block;margin-top:4px;padding:10px 20px;background:var(--gold);color:#000;
-                  font-weight:700;border-radius:10px;text-decoration:none;font-size:14px;">
-          <span style="user-select:all;">📱 (51) 99675-3692</span>
-        </a>
+    <!-- Aviso: mais de 500 convidados -->
+    <div id="custom-guests-block" style="display:none;margin-top:8px;
+         background:linear-gradient(135deg,rgba(201,168,76,.10),rgba(201,168,76,.04));
+         border:1px solid rgba(201,168,76,.35);border-radius:16px;padding:24px 20px;text-align:center;">
+      <div style="font-size:30px;margin-bottom:10px;">🥂</div>
+      <div style="font-size:15px;font-weight:800;color:var(--gold);margin-bottom:10px;letter-spacing:-.3px;">
+        Seu evento merece um orçamento exclusivo!
+      </div>
+      <div id="custom-guests-msg" style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.75;margin-bottom:20px;text-align:left;
+           background:rgba(0,0,0,.2);border-radius:10px;padding:14px 16px;border-left:3px solid rgba(201,168,76,.5);">
+      </div>
+      <button onclick="abrirWhatsAppCustom()" style="display:inline-flex;align-items:center;gap:10px;padding:14px 28px;
+                background:linear-gradient(135deg,#25D366,#1ebe5c);color:#fff;
+                font-weight:800;border-radius:12px;border:none;cursor:pointer;font-size:14px;font-family:inherit;
+                box-shadow:0 4px 18px rgba(37,211,102,.35);width:100%;justify-content:center;margin-bottom:12px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.532 5.86L.057 23.925l6.244-1.44A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.003-1.368l-.36-.214-3.706.854.878-3.607-.234-.372A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+        Solicitar orçamento pelo WhatsApp
+      </button>
+      <div style="font-size:11.5px;color:rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;gap:6px;">
+        <span>📱</span>
+        <span>(51) 99675-3692</span>
+        <span style="color:rgba(255,255,255,.15);">·</span>
+        <span>Rocket Drinks</span>
       </div>
     </div>
 
     <div style="height:80px;"></div>
     <div class="bottom-bar">
-      <button class="btn-main" id="btn-step2-continue" onclick="goTo(3)">Continuar &nbsp;›</button>
+      <button class="btn-main" id="btn-step2-continue" disabled style="opacity:.4;" onclick="goTo(3)">Continuar &nbsp;›</button>
     </div>
   </div>
 
@@ -951,7 +1019,7 @@ select option{background:#111;}
       <div class="plan-card-header">
         <div class="plan-medal">🥇</div>
         <div class="plan-info">
-          <div class="plan-name">Plano Gold</div>
+          <div class="plan-name">Plano Premium</div>
           <div class="plan-desc">Exclusividade premium para impressionar seus convidados.</div>
         </div>
         <div class="plan-price" id="price-gold">R$ —</div>
@@ -1801,13 +1869,76 @@ const CONFIG = {
   fundador: "Larissa Vitória Schmitt",
   whatsapp: "5551996753692",    // (51) 99675-3692
 
-  // PREÇOS DOS PLANOS (R$ por pessoa)
-  // Total = preco_por_pessoa × nº_convidados
+  // PREÇOS DOS PLANOS — faixas por número de convidados (R$ por pessoa)
   planos: {
-    bronze:  { preco_por_pessoa: 22.00, preco_menos100: 28.00, preco_mais250: 28.00 },   // Plano Caipirinhas
-    silver:  { preco_por_pessoa: 28.00, preco_menos100: 34.00, preco_mais250: 28.00 },   // Plano Rocket
-    gold:    { preco_por_pessoa: 38.00, preco_menos100: 44.00, preco_mais250: 28.00 },   // Plano Gold
-    diamond: { preco_por_pessoa: 38.00 },   // (oculto)
+    bronze: {
+      nome:'Plano Caipirinhas', desc:'Uma opção prática e acessível.',
+      bandas:[
+        {max:50,  ppp:52.00},
+        {max:100, ppp:28.00},
+        {max:130, ppp:23.00},
+        {max:160, ppp:21.00},
+        {max:190, ppp:20.00},
+        {max:220, ppp:19.00},
+        {max:261, ppp:17.00},
+        {max:300, ppp:16.00},
+        {max:350, ppp:15.00},
+        {max:400, ppp:14.00},
+        {max:450, ppp:13.50},
+        {max:500, ppp:13.00},
+      ]
+    },
+    silver: {
+      nome:'Plano Rocket', desc:'Completo, variado e equilibrado.',
+      bandas:[
+        {max:50,  ppp:56.00},
+        {max:100, ppp:31.00},
+        {max:130, ppp:26.00},
+        {max:160, ppp:23.00},
+        {max:190, ppp:22.00},
+        {max:220, ppp:20.00},
+        {max:261, ppp:19.00},
+        {max:300, ppp:18.00},
+        {max:350, ppp:17.00},
+        {max:400, ppp:17.00},
+        {max:450, ppp:17.00},
+        {max:500, ppp:17.00},
+      ]
+    },
+    gold: {
+      nome:'Plano Premium', desc:'Exclusividade premium para impressionar seus convidados.',
+      bandas:[
+        {max:50,  ppp:62.00},
+        {max:100, ppp:41.00},
+        {max:130, ppp:33.00},
+        {max:160, ppp:29.00},
+        {max:190, ppp:27.00},
+        {max:220, ppp:25.00},
+        {max:261, ppp:23.00},
+        {max:300, ppp:22.00},
+        {max:350, ppp:20.00},
+        {max:400, ppp:19.50},
+        {max:450, ppp:19.00},
+        {max:500, ppp:19.00},
+      ]
+    },
+    diamond: {
+      nome:'Plano Premium', desc:'Exclusividade premium para impressionar seus convidados.',
+      bandas:[
+        {max:50,  ppp:62.00},
+        {max:100, ppp:41.00},
+        {max:130, ppp:33.00},
+        {max:160, ppp:29.00},
+        {max:190, ppp:27.00},
+        {max:220, ppp:25.00},
+        {max:261, ppp:23.00},
+        {max:300, ppp:22.00},
+        {max:350, ppp:20.00},
+        {max:400, ppp:19.50},
+        {max:450, ppp:19.00},
+        {max:500, ppp:19.00},
+      ]
+    },
   },
   taxa_deslocamento: 0,   // ← valor fixo de deslocamento (R$), ajuste conforme endereço
 
@@ -2115,6 +2246,9 @@ function goTo(n) {
     stepEl.scrollTop = 0;
   });
   updateDots();
+  if (n === 3) {
+    syncPlanPrices();
+  }
   if (n === 4) {
     buildDrinks();
     refreshDrinkItems();
@@ -2122,7 +2256,7 @@ function goTo(n) {
     const planInfo = {
       bronze:  { emoji:'🍹', nome:'Plano Caipirinhas', desc:'Uma opção prática e acessível.' },
       silver:  { emoji:'🚀', nome:'Plano Rocket',      desc:'Completo, variado e equilibrado.' },
-      gold:    { emoji:'🥇', nome:'Plano Gold',        desc:'Exclusividade premium para impressionar seus convidados.' },
+      gold:    { emoji:'🥇', nome:'Plano Premium',      desc:'Exclusividade premium para impressionar seus convidados.' },
       diamond: { emoji:'💎', nome:'Plano Diamond',     desc:'A experiência mais completa e exclusiva.' },
     };
     const pb = document.getElementById('plano-badge-s4');
@@ -2182,8 +2316,12 @@ function validateStep(step) {
       return false;
     }
   }
-  if (step === 2 && (!state.occasion || !state.guests)) {
-    showFieldError('guests-custom', 'Selecione a ocasião e o número de convidados.');
+  if (step === 2 && !state.occasion) {
+    showFieldError('occasion-grid', 'Selecione a ocasião para continuar.');
+    return false;
+  }
+  if (step === 2 && !state.guests) {
+    showFieldError('guests-custom', 'Selecione o número de convidados para continuar.');
     return false;
   }
   if (step === 3 && !state.plan) {
@@ -2329,17 +2467,72 @@ function selectOccasion(el, name) {
   el.classList.add('selected');
   state.occasion = name;
   document.getElementById('s2-name').textContent = state.clientName || 'Você';
+  // Atualiza mensagem do card 500+ se já estiver visível
+  if (document.getElementById('custom-guests-block').style.display !== 'none') {
+    atualizarMsgCustom();
+  }
 }
 
-document.addEventListener('change', function(e) {
-  if (e.target.id === 'guest-count') {
-    const sel = e.target;
-    state.guests = parseInt(sel.value) || 0;
-    state.guestsLabel = sel.options[sel.selectedIndex].text;
-    calcularPrecos();
+// ── HANDLER seletor de convidados por plano ─────────────────
+function onPlanGuestChange(plano) {
+  const sel = document.getElementById('guest-sel-' + plano);
+  if (!sel) return;
+  const val = sel.value;
+  if (val === 'custom') {
+    document.getElementById('price-' + plano).textContent = 'Sob consulta';
+    const disp = document.getElementById('ppp-display-' + plano);
+    if (disp) { disp.textContent = ''; disp.classList.remove('visible'); }
+    return;
   }
-});
+  const guests = parseInt(val);
+  if (!guests) {
+    document.getElementById('price-' + plano).textContent = 'R$ —';
+    const disp = document.getElementById('ppp-display-' + plano);
+    if (disp) { disp.textContent = ''; disp.classList.remove('visible'); }
+    return;
+  }
+  const ppp   = getPrecoPP(plano, guests);
+  const total = guests * ppp;
+  document.getElementById('price-' + plano).textContent = 'R$ ' + fmt(total);
+  const disp = document.getElementById('ppp-display-' + plano);
+  if (disp) {
+    disp.textContent = 'R$ ' + ppp.toFixed(2).replace('.',',') + '/pessoa';
+    disp.classList.add('visible');
+  }
+  const staffEl = document.getElementById('staff-' + plano);
+  if (staffEl) staffEl.textContent = getStaff(guests);
+}
 
+function syncPlanPrices() {
+  ['bronze','silver','gold'].forEach(p => {
+    const sel = document.getElementById('guest-sel-' + p);
+    if (sel && sel.value) onPlanGuestChange(p);
+  });
+}
+
+// ── WHATSAPP para 500+ convidados ─────────────────────────────
+function abrirWhatsAppCustom() {
+  const nome   = (state.clientName || '').split(' ')[0];
+  const evento = state.occasion || '';
+
+  const nomeTexto   = nome   ? `Meu nome é *${nome}* e estou` : 'Estou';
+  const eventoTexto = evento ? `um(a) *${evento}*` : 'um evento especial';
+
+  const msg = `Olá! ${nomeTexto} organizando ${eventoTexto} com mais de 500 convidados.\n\nGostaria de solicitar um orçamento personalizado da Rocket Drinks para o meu evento. 🥂\n\nPodem me ajudar?`;
+  window.open('https://wa.me/5551996753692?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function atualizarMsgCustom() {
+  const nome   = (state.clientName || '').split(' ')[0];
+  const evento = state.occasion || null;
+  const el     = document.getElementById('custom-guests-msg');
+  if (!el) return;
+  const nomeStr   = nome   ? `<strong style="color:#fff;">${nome}</strong>, seu` : 'Seu';
+  const eventoStr = evento ? ` de <strong style="color:var(--gold);">${evento}</strong>` : '';
+  el.innerHTML =
+    `${nomeStr} evento${eventoStr} com mais de <strong style="color:#fff;">500 convidados</strong> merece uma atenção especial! ✨<br><br>` +
+    `Nossa equipe vai preparar um orçamento <strong style="color:var(--gold);">exclusivo e personalizado</strong> para a sua celebração. Entre em contato pelo WhatsApp e cuidamos de tudo para você.`;
+}
 
 // ── HANDLER select de convidados ─────────────────────────────
 function onGuestSelect() {
@@ -2347,7 +2540,10 @@ function onGuestSelect() {
   const val = sel.value;
   const customBlock = document.getElementById('custom-guests-block');
   const btn = document.getElementById('btn-step2-continue');
+
   if (val === 'custom') {
+    // Acima de 500 — exibe card de contato, desabilita Continuar
+    atualizarMsgCustom();
     customBlock.style.display = 'block';
     btn.disabled = true;
     btn.style.opacity = '0.4';
@@ -2355,13 +2551,18 @@ function onGuestSelect() {
     state.guestsLabel = '';
   } else {
     customBlock.style.display = 'none';
-    btn.disabled = false;
-    btn.style.opacity = '';
     if (val) {
+      btn.disabled = false;
+      btn.style.opacity = '';
       state.guests = parseInt(val);
       state.guestsLabel = sel.options[sel.selectedIndex].text;
+      calcularPrecos();
+    } else {
+      btn.disabled = true;
+      btn.style.opacity = '0.4';
+      state.guests = 0;
+      state.guestsLabel = '';
     }
-    calcularPrecos();
   }
 }
 
@@ -2392,36 +2593,15 @@ function getStaff(guests) {
 
 // ── PREÇO POR PESSOA conforme nº de convidados ────────────────
 function getPrecoPP(plano, guests) {
-  const pl = CONFIG.planos[plano];
-  if (!pl) return 0;
-  const normal   = pl.preco_por_pessoa || 0;
-  const mini     = pl.preco_menos100 || normal;  // < 100 convidados
-  const grande   = pl.preco_mais250  || normal;  // > 250 convidados
-  if (guests > 0 && guests < 100)  return mini;
-  if (guests > 250)                return grande;
-  return normal;
+  const planKey = (plano === 'diamond') ? 'gold' : plano;
+  const pl = CONFIG.planos[planKey];
+  if (!pl || !pl.bandas || !guests || guests <= 0) return 0;
+  for (const b of pl.bandas) {
+    if (guests <= b.max) return b.ppp;
+  }
+  return pl.bandas[pl.bandas.length - 1].ppp;
 }
 
-// ── HANDLER campo 600+ ────────────────────────────────────────
-function onCustomGuests() {
-  const val = parseInt(document.getElementById('custom-guest-input').value) || 0;
-  const warn = document.getElementById('custom-guests-warning');
-  const btn  = document.getElementById('btn-step2-continue');
-  if (val > 1000) {
-    warn.style.display = 'block';
-    btn.disabled = true;
-    btn.style.opacity = '0.4';
-    state.guests = 0;
-    state.guestsLabel = '';
-  } else if (val >= 601) {
-    warn.style.display = 'none';
-    btn.disabled = false;
-    btn.style.opacity = '';
-    state.guests = val;
-    state.guestsLabel = val + ' convidados';
-    calcularPrecos();
-  }
-}
 
 function calcularPrecos() {
   const g = state.guests;
@@ -2455,7 +2635,12 @@ function selectPlan(name, e) {
   e.stopPropagation();
   state.plan = name;
   state.planLabel = { bronze:'Caipirinhas 🍹', silver:'Rocket 🚀', gold:'Gold 🥇', diamond:'Gold 🥇' }[name];
-  state.totalValue = (state.guests || 0) * getPrecoPP(name, state.guests || 0);
+
+  if (!state.guests) {
+    showFieldError('plan-error-anchor', 'Selecione o número de convidados para continuar.');
+    return;
+  }
+  state.totalValue = state.guests * getPrecoPP(name, state.guests);
 
   document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
   document.getElementById('plan-' + name).classList.add('selected');
@@ -3145,7 +3330,17 @@ function reiniciar() {
   var _phoneEl = document.getElementById('client-phone');
   if (_phoneEl) _phoneEl.value = '';
   document.querySelectorAll('.occasion-card').forEach(c=>c.classList.remove('selected'));
-  document.getElementById('guest-count').value = '';
+  // Reset guest count
+  const gcSel = document.getElementById('guest-count');
+  if (gcSel) gcSel.value = '';
+  const cbBlock = document.getElementById('custom-guests-block');
+  if (cbBlock) cbBlock.style.display = 'none';
+  const btnCont = document.getElementById('btn-step2-continue');
+  if (btnCont) { btnCont.disabled = true; btnCont.style.opacity = '0.4'; }
+  ['bronze','silver','gold'].forEach(p => {
+    const priceEl = document.getElementById('price-' + p);
+    if (priceEl) priceEl.textContent = 'R$ —';
+  });
   const gcEl = document.getElementById('guests-custom');
   if (gcEl) gcEl.value = '';
   document.querySelectorAll('.plan-card').forEach(c=>c.classList.remove('selected','open'));

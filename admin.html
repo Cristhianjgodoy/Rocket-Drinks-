@@ -219,6 +219,31 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .item-drag-handle:active{cursor:grabbing;}
 .bar-model-card.drag-over{outline:2px dashed var(--gold);outline-offset:2px;}
 .bar-model-card.dragging{opacity:.3;}
+/* ── BAND SELECTOR (admin pricing) ── */
+.band-sel-wrap{margin-bottom:4px;}
+.band-pill-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.band-pill{padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;border:1px solid rgba(201,168,76,.3);color:rgba(255,255,255,.45);cursor:pointer;transition:all .15s;white-space:nowrap;user-select:none;}
+.band-pill:hover{border-color:#c9a84c;color:#c9a84c;}
+.band-pill.bsel{background:#c9a84c;color:#000;border-color:#c9a84c;}
+.band-edit-single{display:none;padding:10px 12px;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.2);border-radius:8px;margin-bottom:8px;}
+.band-edit-single.vis{display:block;}
+.band-edit-single .belt{font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px;font-weight:600;}
+.band-edit-single .beinp-wrap{display:flex;align-items:center;gap:6px;}
+.band-edit-single .bepre{font-size:13px;color:#c9a84c;font-weight:700;}
+.band-edit-single .beinp{background:#1a1a1a;border:1px solid rgba(201,168,76,.4);border-radius:7px;color:#f0f0f0;font-size:15px;font-weight:700;padding:8px 10px;width:110px;outline:none;font-family:inherit;}
+.band-edit-single .beinp:focus{border-color:#c9a84c;}
+.band-toggle-all{background:none;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:rgba(255,255,255,.4);font-size:10.5px;cursor:pointer;padding:4px 10px;font-family:inherit;transition:all .15s;margin-bottom:10px;}
+.band-toggle-all:hover{border-color:#c9a84c;color:#c9a84c;}
+.band-all-tbl{display:none;width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;}
+.band-all-tbl.open{display:table;}
+.band-all-tbl th{color:rgba(255,255,255,.35);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left;}
+.band-all-tbl th:last-child,.band-all-tbl td:last-child{text-align:right;}
+.band-all-tbl td{padding:4px 6px;color:rgba(255,255,255,.6);border-bottom:1px solid rgba(255,255,255,.04);}
+.band-all-tbl tr:last-child td{border-bottom:none;}
+.band-all-tbl .btinp{background:#111;border:1px solid rgba(255,255,255,.1);border-radius:5px;color:#f0f0f0;font-size:12px;padding:4px 7px;width:80px;outline:none;font-family:inherit;text-align:right;}
+.band-all-tbl .btinp:focus{border-color:#c9a84c;}
+.band-all-tbl tr.brow-sel{background:rgba(201,168,76,.08);}
+.band-all-tbl tr.brow-sel td{color:#c9a84c;}
 </style>
 </head>
 <body>
@@ -308,20 +333,44 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 
       <!-- Bronze -->
       <div class="pp active" id="pp-bronze">
-        <div class="stitle" style="margin-top:4px;">💰 Preço por Pessoa</div>
-        <div class="pricebox"><span class="ppre">R$</span>
-          <input class="pinp" id="preco-bronze" type="number" step="0.50" min="1" oninput="dirty()"></div>
-        <div class="fg" style="margin-top:10px;">
-          <label class="fl" style="color:var(--mu);">💰 Preço por Pessoa <span style="background:rgba(201,168,76,.15);color:var(--gold);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">Menos de 100 convidados</span></label>
-          <div class="pricebox"><span class="ppre">R$</span>
-            <input class="pinp" id="preco-menos100-bronze" type="number" step="0.50" min="1" oninput="dirty()" placeholder="—"></div>
-          <div style="font-size:10px;color:var(--mu);margin-top:4px;">Se em branco, usa o preço padrão acima para todos os eventos.</div>
-        </div>
-        <div class="fg" style="margin-top:10px;">
-          <label class="fl" style="color:var(--mu);">💰 Preço por Pessoa <span style="background:rgba(76,201,168,.15);color:#4cc9a8;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">Acima de 250 convidados</span></label>
-          <div class="pricebox"><span class="ppre">R$</span>
-            <input class="pinp" id="preco-mais250-bronze" type="number" step="0.50" min="1" oninput="dirty()" placeholder="28"></div>
-          <div style="font-size:10px;color:var(--mu);margin-top:4px;">Valor especial aplicado quando o evento ultrapassa 250 convidados.</div>
+        <div class="stitle" style="margin-top:4px;">💰 Preço por Faixa de Convidados</div>
+        <div class="band-sel-wrap" id="bsw-bronze">
+          <div class="band-pill-row" id="bpr-bronze">
+            <div class="band-pill" onclick="selBand('bronze',0,this)">Até 50</div>
+            <div class="band-pill" onclick="selBand('bronze',1,this)">51–100</div>
+            <div class="band-pill" onclick="selBand('bronze',2,this)">101–130</div>
+            <div class="band-pill" onclick="selBand('bronze',3,this)">131–160</div>
+            <div class="band-pill" onclick="selBand('bronze',4,this)">161–190</div>
+            <div class="band-pill" onclick="selBand('bronze',5,this)">191–220</div>
+            <div class="band-pill" onclick="selBand('bronze',6,this)">221–261</div>
+            <div class="band-pill" onclick="selBand('bronze',7,this)">261–300</div>
+            <div class="band-pill" onclick="selBand('bronze',8,this)">301–350</div>
+            <div class="band-pill" onclick="selBand('bronze',9,this)">351–400</div>
+            <div class="band-pill" onclick="selBand('bronze',10,this)">401–450</div>
+            <div class="band-pill" onclick="selBand('bronze',11,this)">451–500</div>
+          </div>
+          <div class="band-edit-single" id="bes-bronze">
+            <div class="belt" id="belt-bronze">—</div>
+            <div class="beinp-wrap"><span class="bepre">R$</span><input class="beinp" id="banda-bronze-cur" type="number" step="0.50" min="1" oninput="syncBandInput('bronze')"></div>
+          </div>
+          <button class="band-toggle-all" onclick="toggleAllBands('bronze',this)">☰ Ver todos ▾</button>
+          <table class="band-all-tbl" id="bat-bronze">
+            <thead><tr><th>Faixa</th><th>R$/pessoa</th></tr></thead>
+            <tbody>
+              <tr id="batr-bronze-0"><td>Até 50</td><td><input class="btinp" id="banda-bronze-0" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-1"><td>51–100</td><td><input class="btinp" id="banda-bronze-1" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-2"><td>101–130</td><td><input class="btinp" id="banda-bronze-2" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-3"><td>131–160</td><td><input class="btinp" id="banda-bronze-3" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-4"><td>161–190</td><td><input class="btinp" id="banda-bronze-4" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-5"><td>191–220</td><td><input class="btinp" id="banda-bronze-5" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-6"><td>221–261</td><td><input class="btinp" id="banda-bronze-6" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-7"><td>261–300</td><td><input class="btinp" id="banda-bronze-7" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-8"><td>301–350</td><td><input class="btinp" id="banda-bronze-8" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-9"><td>351–400</td><td><input class="btinp" id="banda-bronze-9" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-10"><td>401–450</td><td><input class="btinp" id="banda-bronze-10" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-bronze-11"><td>451–500</td><td><input class="btinp" id="banda-bronze-11" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+            </tbody>
+          </table>
         </div>
         <div class="dv"></div>
         <div class="stitle">📝 Informações do Plano</div>
@@ -337,20 +386,44 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 
       <!-- Silver -->
       <div class="pp" id="pp-silver">
-        <div class="stitle" style="margin-top:4px;">💰 Preço por Pessoa</div>
-        <div class="pricebox"><span class="ppre">R$</span>
-          <input class="pinp" id="preco-silver" type="number" step="0.50" min="1" oninput="dirty()"></div>
-        <div class="fg" style="margin-top:10px;">
-          <label class="fl" style="color:var(--mu);">💰 Preço por Pessoa <span style="background:rgba(201,168,76,.15);color:var(--gold);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">Menos de 100 convidados</span></label>
-          <div class="pricebox"><span class="ppre">R$</span>
-            <input class="pinp" id="preco-menos100-silver" type="number" step="0.50" min="1" oninput="dirty()" placeholder="—"></div>
-          <div style="font-size:10px;color:var(--mu);margin-top:4px;">Se em branco, usa o preço padrão acima para todos os eventos.</div>
-        </div>
-        <div class="fg" style="margin-top:10px;">
-          <label class="fl" style="color:var(--mu);">💰 Preço por Pessoa <span style="background:rgba(76,201,168,.15);color:#4cc9a8;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">Acima de 250 convidados</span></label>
-          <div class="pricebox"><span class="ppre">R$</span>
-            <input class="pinp" id="preco-mais250-silver" type="number" step="0.50" min="1" oninput="dirty()" placeholder="28"></div>
-          <div style="font-size:10px;color:var(--mu);margin-top:4px;">Valor especial aplicado quando o evento ultrapassa 250 convidados.</div>
+        <div class="stitle" style="margin-top:4px;">💰 Preço por Faixa de Convidados</div>
+        <div class="band-sel-wrap" id="bsw-silver">
+          <div class="band-pill-row" id="bpr-silver">
+            <div class="band-pill" onclick="selBand('silver',0,this)">Até 50</div>
+            <div class="band-pill" onclick="selBand('silver',1,this)">51–100</div>
+            <div class="band-pill" onclick="selBand('silver',2,this)">101–130</div>
+            <div class="band-pill" onclick="selBand('silver',3,this)">131–160</div>
+            <div class="band-pill" onclick="selBand('silver',4,this)">161–190</div>
+            <div class="band-pill" onclick="selBand('silver',5,this)">191–220</div>
+            <div class="band-pill" onclick="selBand('silver',6,this)">221–261</div>
+            <div class="band-pill" onclick="selBand('silver',7,this)">261–300</div>
+            <div class="band-pill" onclick="selBand('silver',8,this)">301–350</div>
+            <div class="band-pill" onclick="selBand('silver',9,this)">351–400</div>
+            <div class="band-pill" onclick="selBand('silver',10,this)">401–450</div>
+            <div class="band-pill" onclick="selBand('silver',11,this)">451–500</div>
+          </div>
+          <div class="band-edit-single" id="bes-silver">
+            <div class="belt" id="belt-silver">—</div>
+            <div class="beinp-wrap"><span class="bepre">R$</span><input class="beinp" id="banda-silver-cur" type="number" step="0.50" min="1" oninput="syncBandInput('silver')"></div>
+          </div>
+          <button class="band-toggle-all" onclick="toggleAllBands('silver',this)">☰ Ver todos ▾</button>
+          <table class="band-all-tbl" id="bat-silver">
+            <thead><tr><th>Faixa</th><th>R$/pessoa</th></tr></thead>
+            <tbody>
+              <tr id="batr-silver-0"><td>Até 50</td><td><input class="btinp" id="banda-silver-0" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-1"><td>51–100</td><td><input class="btinp" id="banda-silver-1" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-2"><td>101–130</td><td><input class="btinp" id="banda-silver-2" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-3"><td>131–160</td><td><input class="btinp" id="banda-silver-3" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-4"><td>161–190</td><td><input class="btinp" id="banda-silver-4" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-5"><td>191–220</td><td><input class="btinp" id="banda-silver-5" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-6"><td>221–261</td><td><input class="btinp" id="banda-silver-6" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-7"><td>261–300</td><td><input class="btinp" id="banda-silver-7" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-8"><td>301–350</td><td><input class="btinp" id="banda-silver-8" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-9"><td>351–400</td><td><input class="btinp" id="banda-silver-9" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-10"><td>401–450</td><td><input class="btinp" id="banda-silver-10" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-silver-11"><td>451–500</td><td><input class="btinp" id="banda-silver-11" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+            </tbody>
+          </table>
         </div>
         <div class="dv"></div>
         <div class="stitle">📝 Informações do Plano</div>
@@ -366,20 +439,44 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 
       <!-- Gold -->
       <div class="pp" id="pp-gold">
-        <div class="stitle" style="margin-top:4px;">💰 Preço por Pessoa</div>
-        <div class="pricebox"><span class="ppre">R$</span>
-          <input class="pinp" id="preco-gold" type="number" step="0.50" min="1" oninput="dirty()"></div>
-        <div class="fg" style="margin-top:10px;">
-          <label class="fl" style="color:var(--mu);">💰 Preço por Pessoa <span style="background:rgba(201,168,76,.15);color:var(--gold);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">Menos de 100 convidados</span></label>
-          <div class="pricebox"><span class="ppre">R$</span>
-            <input class="pinp" id="preco-menos100-gold" type="number" step="0.50" min="1" oninput="dirty()" placeholder="—"></div>
-          <div style="font-size:10px;color:var(--mu);margin-top:4px;">Se em branco, usa o preço padrão acima para todos os eventos.</div>
-        </div>
-        <div class="fg" style="margin-top:10px;">
-          <label class="fl" style="color:var(--mu);">💰 Preço por Pessoa <span style="background:rgba(76,201,168,.15);color:#4cc9a8;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">Acima de 250 convidados</span></label>
-          <div class="pricebox"><span class="ppre">R$</span>
-            <input class="pinp" id="preco-mais250-gold" type="number" step="0.50" min="1" oninput="dirty()" placeholder="28"></div>
-          <div style="font-size:10px;color:var(--mu);margin-top:4px;">Valor especial aplicado quando o evento ultrapassa 250 convidados.</div>
+        <div class="stitle" style="margin-top:4px;">💰 Preço por Faixa de Convidados</div>
+        <div class="band-sel-wrap" id="bsw-gold">
+          <div class="band-pill-row" id="bpr-gold">
+            <div class="band-pill" onclick="selBand('gold',0,this)">Até 50</div>
+            <div class="band-pill" onclick="selBand('gold',1,this)">51–100</div>
+            <div class="band-pill" onclick="selBand('gold',2,this)">101–130</div>
+            <div class="band-pill" onclick="selBand('gold',3,this)">131–160</div>
+            <div class="band-pill" onclick="selBand('gold',4,this)">161–190</div>
+            <div class="band-pill" onclick="selBand('gold',5,this)">191–220</div>
+            <div class="band-pill" onclick="selBand('gold',6,this)">221–261</div>
+            <div class="band-pill" onclick="selBand('gold',7,this)">261–300</div>
+            <div class="band-pill" onclick="selBand('gold',8,this)">301–350</div>
+            <div class="band-pill" onclick="selBand('gold',9,this)">351–400</div>
+            <div class="band-pill" onclick="selBand('gold',10,this)">401–450</div>
+            <div class="band-pill" onclick="selBand('gold',11,this)">451–500</div>
+          </div>
+          <div class="band-edit-single" id="bes-gold">
+            <div class="belt" id="belt-gold">—</div>
+            <div class="beinp-wrap"><span class="bepre">R$</span><input class="beinp" id="banda-gold-cur" type="number" step="0.50" min="1" oninput="syncBandInput('gold')"></div>
+          </div>
+          <button class="band-toggle-all" onclick="toggleAllBands('gold',this)">☰ Ver todos ▾</button>
+          <table class="band-all-tbl" id="bat-gold">
+            <thead><tr><th>Faixa</th><th>R$/pessoa</th></tr></thead>
+            <tbody>
+              <tr id="batr-gold-0"><td>Até 50</td><td><input class="btinp" id="banda-gold-0" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-1"><td>51–100</td><td><input class="btinp" id="banda-gold-1" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-2"><td>101–130</td><td><input class="btinp" id="banda-gold-2" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-3"><td>131–160</td><td><input class="btinp" id="banda-gold-3" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-4"><td>161–190</td><td><input class="btinp" id="banda-gold-4" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-5"><td>191–220</td><td><input class="btinp" id="banda-gold-5" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-6"><td>221–261</td><td><input class="btinp" id="banda-gold-6" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-7"><td>261–300</td><td><input class="btinp" id="banda-gold-7" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-8"><td>301–350</td><td><input class="btinp" id="banda-gold-8" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-9"><td>351–400</td><td><input class="btinp" id="banda-gold-9" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-10"><td>401–450</td><td><input class="btinp" id="banda-gold-10" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+              <tr id="batr-gold-11"><td>451–500</td><td><input class="btinp" id="banda-gold-11" type="number" step="0.50" min="1" oninput="dirty()"></td></tr>
+            </tbody>
+          </table>
         </div>
         <div class="dv"></div>
         <div class="stitle">📝 Informações do Plano</div>
@@ -483,6 +580,50 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 <div class="toast" id="toast"></div>
 
 <script>
+const BAND_LABELS_ADM = ['Até 50','51–100','101–130','131–160','161–190','191–220','221–261','261–300','301–350','351–400','401–450','451–500'];
+var curBandIdx = {bronze:-1, silver:-1, gold:-1};
+
+function selBand(plan, idx, el) {
+  // Deselect all pills
+  document.querySelectorAll('#bpr-'+plan+' .band-pill').forEach(function(p){p.classList.remove('bsel');});
+  el.classList.add('bsel');
+  curBandIdx[plan] = idx;
+
+  // Show single editor
+  var bes = document.getElementById('bes-'+plan);
+  bes.classList.add('vis');
+  document.getElementById('belt-'+plan).textContent = BAND_LABELS_ADM[idx] + ' convidados';
+
+  // Sync value from hidden input (banda-plan-idx)
+  var srcInp = document.getElementById('banda-'+plan+'-'+idx);
+  var curInp = document.getElementById('banda-'+plan+'-cur');
+  if (srcInp && curInp) curInp.value = srcInp.value;
+
+  // Highlight row in full table
+  document.querySelectorAll('#bat-'+plan+' tbody tr').forEach(function(r){r.classList.remove('brow-sel');});
+  var selRow = document.getElementById('batr-'+plan+'-'+idx);
+  if (selRow) selRow.classList.add('brow-sel');
+}
+
+function syncBandInput(plan) {
+  // Copy value from "cur" input to the real hidden input
+  var idx = curBandIdx[plan];
+  if (idx < 0) return;
+  var curInp = document.getElementById('banda-'+plan+'-cur');
+  var srcInp = document.getElementById('banda-'+plan+'-'+idx);
+  if (curInp && srcInp) { srcInp.value = curInp.value; dirty(); }
+  // Also update the table row input if visible
+  var tblInp = document.querySelector('#batr-'+plan+'-'+idx+' .btinp');
+  if (tblInp && curInp) tblInp.value = curInp.value;
+}
+
+function toggleAllBands(plan, btn) {
+  var tbl = document.getElementById('bat-'+plan);
+  var isOpen = tbl.classList.contains('open');
+  tbl.classList.toggle('open');
+  btn.textContent = isOpen ? '☰ Ver todos ▾' : '☰ Ocultar ▴';
+}
+
 const SK = 'rocketDrinksConfig';
 const CK = 'rocketAdminCreds';
 const AK = 'rocketAdminSession';
@@ -491,11 +632,14 @@ const AK = 'rocketAdminSession';
 const DEF = {
   empresa:'Rocket Drinks', fundador:'Larissa Vitória Schmitt', whatsapp:'5551996753692',
   planos:{
-    bronze:{ preco_por_pessoa:22, preco_menos100:28, preco_mais250:28, nome:'Plano Caipirinhas', desc:'Uma opção prática e acessível.',
+    bronze:{ nome:'Plano Caipirinhas', desc:'Uma opção prática e acessível.',
+             bandas:[{max:50,ppp:52},{max:100,ppp:28},{max:130,ppp:23},{max:160,ppp:21},{max:190,ppp:20},{max:220,ppp:19},{max:261,ppp:17},{max:300,ppp:16},{max:350,ppp:15},{max:400,ppp:14},{max:450,ppp:13.5},{max:500,ppp:13}],
              features:['Até 6 sabores de caipirinhas','05h de serviço','Equipe por faixa de convidados','Copos de vidro, utensílios e insumos de bar','Vodka, Saquê e Cachaça'] },
-    silver:{ preco_por_pessoa:28, preco_menos100:34, preco_mais250:28, nome:'Plano Rocket', desc:'Completo, variado e equilibrado.',
+    silver:{ nome:'Plano Rocket', desc:'Completo, variado e equilibrado.',
+             bandas:[{max:50,ppp:56},{max:100,ppp:31},{max:130,ppp:26},{max:160,ppp:23},{max:190,ppp:22},{max:220,ppp:20},{max:261,ppp:19},{max:300,ppp:18},{max:350,ppp:17},{max:400,ppp:17},{max:450,ppp:17},{max:500,ppp:17}],
              features:['6 opções de drinks + 2 caipirinhas','05h de serviço','Equipe por faixa de convidados','Copos de vidro, utensílios e insumos de bar','Destilados nacionais'] },
-    gold:{ preco_por_pessoa:38, preco_menos100:44, preco_mais250:28, nome:'Plano Gold', desc:'Exclusividade premium para impressionar seus convidados.',
+    gold:{ nome:'Plano Gold', desc:'Exclusividade premium para impressionar seus convidados.',
+           bandas:[{max:50,ppp:62},{max:100,ppp:41},{max:130,ppp:33},{max:160,ppp:29},{max:190,ppp:27},{max:220,ppp:25},{max:261,ppp:23},{max:300,ppp:22},{max:350,ppp:20},{max:400,ppp:19.5},{max:450,ppp:19},{max:500,ppp:19}],
            features:['6 opções de drinks + 2 caipirinhas','05h de serviço','Equipe por faixa de convidados','Copos de vidro, utensílios e insumos de bar','Destilados importados'] },
   },
   grupos:{
@@ -782,9 +926,7 @@ function loadAll(){
   // Populate Planos
   ['bronze','silver','gold'].forEach(p=>{
     const pl=cfg.planos[p];
-    document.getElementById('preco-'+p).value=pl.preco_por_pessoa;
-    if(pl.preco_menos100)document.getElementById('preco-menos100-'+p).value=pl.preco_menos100;
-    if(pl.preco_mais250)document.getElementById('preco-mais250-'+p).value=pl.preco_mais250;
+    if(pl.bandas){pl.bandas.forEach(function(b,i){var el=document.getElementById('banda-'+p+'-'+i);if(el)el.value=b.ppp;});}
     document.getElementById('pnome-'+p).value=pl.nome||'';
     document.getElementById('pdesc-'+p).value=pl.desc||'';
     renderFeats(p, pl.features||[]);
@@ -1565,9 +1707,7 @@ function save(){
       const feats=[];
       for(let i=0;i<5;i++){const el=document.getElementById(`feat-${p}-${i}`);if(el)feats.push(el.value);}
       ov.planos[p]={
-        preco_por_pessoa:parseFloat(document.getElementById('preco-'+p).value)||DEF.planos[p].preco_por_pessoa,
-        preco_menos100:(()=>{const v=parseFloat(document.getElementById('preco-menos100-'+p).value);return v>0?v:null;})(),
-        preco_mais250:(()=>{const v=parseFloat(document.getElementById('preco-mais250-'+p).value);return v>0?v:null;})(),
+        bandas:DEF.planos[p].bandas.map(function(b,i){var el=document.getElementById('banda-'+p+'-'+i);var v=parseFloat(el&&el.value);return {max:b.max,ppp:(v>0?v:b.ppp)};} ),
         nome:document.getElementById('pnome-'+p).value,
         desc:document.getElementById('pdesc-'+p).value,
         features:feats,
