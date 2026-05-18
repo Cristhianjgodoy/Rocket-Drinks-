@@ -1379,7 +1379,7 @@ select option{background:#111;}
       <div class="invest-box" style="margin-bottom:18px;">
         <div class="invest-label">💰 Investimento Total</div>
         <div class="invest-value" id="closing-total">R$ 0,00</div>
-        <div class="invest-note">Valores de deslocamento e estrutura confirmados via atendimento</div>
+        <div class="invest-note" id="closing-bancada-note" style="display:none;">Você escolheu a opção de bancada. Valores da estrutura e do frete serão confirmados via atendimento</div>
       </div>
 
       <!-- Summary card -->
@@ -3205,6 +3205,9 @@ function renderClosing() {
   else if (state.barOption === 'org') barText = 'Bar da decoração';
   else if (state.barOption === 'quer') barText = state.barStructure ? 'Modelo: ' + state.barStructure : 'A definir com atendimento';
   document.getElementById('closing-bar').textContent = barText;
+
+  // Nota de bancada — só aparece se o cliente selecionou "Desejo selecionar"
+  document.getElementById('closing-bancada-note').style.display = state.barOption === 'quer' ? 'block' : 'none';
 
   // Degustação
   document.getElementById('closing-degustacao').textContent = state.degustacao ? 'Solicitada ✓' : 'Não solicitada';
