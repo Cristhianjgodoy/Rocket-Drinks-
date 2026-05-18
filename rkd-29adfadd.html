@@ -24,7 +24,8 @@
   }
   setInterval(_chkDev,1500);
   function _chkSize(){
-    if((window.outerWidth-window.innerWidth)>160||(window.outerHeight-window.innerHeight)>160){
+    var mob=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    if(!mob&&((window.outerWidth-window.innerWidth)>220||(window.outerHeight-window.innerHeight)>220)){
       sessionStorage.clear();
       document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0d0d0d;color:#b5651d;font-family:sans-serif;font-size:18px;text-align:center;padding:20px;">🔒 Sessão encerrada por segurança.<br><br><small style="color:#555;font-size:13px;">Recarregue a página para continuar.</small></div>';
     }
