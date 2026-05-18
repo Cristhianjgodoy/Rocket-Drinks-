@@ -20,9 +20,13 @@
       }
     }
   }catch(e){}
-  // Preserva hash para acesso secreto ao admin
+  // Acesso direto ao admin via hash secreto
   var _h=location.hash;
-  window.location.replace('orcamento-rocket-drinks.html'+(_h||''));
+  if(_h==='#_adm'){
+    window.location.replace('rkd-29adfadd.html');
+  } else {
+    window.location.replace('orcamento-rocket-drinks.html'+(_h||''));
+  }
 })();
 </script>
 </body>
