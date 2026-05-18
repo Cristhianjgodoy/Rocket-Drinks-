@@ -740,21 +740,31 @@ const LK = 'rocketLoginLock';
 // ── CREDENTIALS ─────────────────────────────
 function getCreds(){
   const d={user:'rocket',pass:'rocket2024',recEmail1:'cristhianj.godoy@gmail.com',recEmail2:'larissavictoriaschmitt@gmail.com',recWhatsapp:'5551997397781'};
-  try{const s=JSON.parse(localStorage.getItem(CK));return s?{...d,...s}:d;}catch{return d;}
+  try{
+    const s=JSON.parse(localStorage.getItem(CK));
+    if(!s) return d;
+    // Se tem passHash mas não tem pass (formato antigo quebrado), limpa e usa padrão
+    if(s.passHash && !s.pass){ localStorage.removeItem(CK); return d; }
+    return {...d,...s};
+  }catch{ return d; }
 }
 
 // ── LOGIN / LOGOUT ───────────────────────────
 function doLogin(){
-  // Verifica bloqueio por tentativas
   try{
+    // Limpa lockout expirado
     const lk=JSON.parse(localStorage.getItem(LK)||'{}');
-    if(lk.until && lk.until > Date.now()){
-      const mins=Math.ceil((lk.until-Date.now())/60000);
-      document.getElementById('lerr').textContent='Acesso bloqueado. Tente novamente em '+mins+' min.';
-      document.getElementById('lerr').style.display='block';
-      return;
+    if(lk.until){
+      if(lk.until > Date.now()){
+        const mins=Math.ceil((lk.until-Date.now())/60000);
+        document.getElementById('lerr').textContent='Acesso bloqueado. Tente em '+mins+' min.';
+        document.getElementById('lerr').style.display='block';
+        return;
+      } else {
+        localStorage.removeItem(LK); // lockout expirado, limpa
+      }
     }
-  }catch(e){}
+  }catch(e){ localStorage.removeItem(LK); }
   const u=document.getElementById('lu').value.trim();
   const p=document.getElementById('lp').value;
   const c=getCreds();
