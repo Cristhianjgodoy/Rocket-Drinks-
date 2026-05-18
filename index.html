@@ -4,12 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rocket Drinks</title>
-<style>body{margin:0;background:#0d0d0d;}</style>
+<style>body{margin:0;background:#0d0d0d;display:flex;align-items:center;justify-content:center;min-height:100vh;}</style>
 </head>
 <body>
 <script>
 (async function(){
   try{
+    // Carrega configuração publicada para visitantes (clientes)
+    // Não sobrescreve se for o dispositivo do admin
     if(!localStorage.getItem('rocketAdminCreds')){
       const r=await fetch('rocket-config.json?t='+Date.now());
       if(r.ok){
@@ -18,7 +20,9 @@
       }
     }
   }catch(e){}
-  window.location.replace('orcamento-rocket-drinks.html');
+  // Preserva hash para acesso secreto ao admin
+  var _h=location.hash;
+  window.location.replace('orcamento-rocket-drinks.html'+(_h||''));
 })();
 </script>
 </body>
