@@ -2036,6 +2036,23 @@ const CONFIG = {
   },
 };
 
+// Freeze config to prevent tampering
+Object.freeze(CONFIG);
+try{
+  ['planos','drinks_simples','drinks_premium','adicItems','barModels'].forEach(k=>{
+    if(CONFIG[k]){
+      if(Array.isArray(CONFIG[k])){CONFIG[k].forEach(i=>Object.freeze(i));}
+      else{Object.keys(CONFIG[k]).forEach(p=>{Object.freeze(CONFIG[k][p]);if(CONFIG[k][p]&&CONFIG[k][p].faixas)CONFIG[k][p].faixas.forEach(f=>Object.freeze(f));});}
+    }
+  });
+}catch{}
+
+// Security notice
+(function(){
+  const s='color:#b5651d;font-size:16px;font-weight:bold;';
+  const s2='color:#888;font-size:12px;';
+  setInterval(()=>console.log('%c⛔ Rocket Drinks — Sistema Protegido\n%cModificar valores aqui viola os termos de uso.',s,s2),5000);
+})();
 
 // =========================================================
 //  ADMIN CONFIG OVERRIDE (from embed or localStorage)
@@ -3242,6 +3259,7 @@ function renderClosing() {
 //  WHATSAPP
 // =========================================================
 function enviarWhatsApp() {
+  if(!Object.isFrozen(CONFIG)){location.reload();return;}
   const _allDrinks = CONFIG.drinks_simples.concat(CONFIG.drinks_prime, CONFIG.drinks_diamond);
   const drinks_all = state.selectedDrinks.map(id => _allDrinks.find(d=>d.id===id)?.nome).filter(Boolean).join(', ') || '—';
 

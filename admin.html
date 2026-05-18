@@ -716,27 +716,75 @@ const DEF = {
   ],
 };
 
+// ── SECURITY ─────────────────────────────────
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+let _defaultPassHash = '';
+sha256('rocket2024').then(h => { _defaultPassHash = h; });
+
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 30 * 60 * 1000;
+const LK = 'rocketLoginLock';
+
 // ── CREDENTIALS ─────────────────────────────
 function getCreds(){
-  const d={user:'rocket',pass:'rocket2024',recEmail1:'cristhianj.godoy@gmail.com',recEmail2:'larissavictoriaschmitt@gmail.com',recWhatsapp:'5551997397781'};
+  const d={user:'rocket',passHash:_defaultPassHash,recEmail1:'cristhianj.godoy@gmail.com',recEmail2:'larissavictoriaschmitt@gmail.com',recWhatsapp:'5551997397781'};
   try{const s=JSON.parse(localStorage.getItem(CK));return s?{...d,...s}:d;}catch{return d;}
 }
 
 // ── LOGIN / LOGOUT ───────────────────────────
-function doLogin(){
+async function doLogin(){
+  // Brute force check
+  try{
+    const lk=JSON.parse(localStorage.getItem(LK)||'{}');
+    if(lk.until && lk.until > Date.now()){
+      const mins=Math.ceil((lk.until-Date.now())/60000);
+      document.getElementById('lerr').textContent=`Acesso bloqueado. Tente novamente em ${mins} min.`;
+      document.getElementById('lerr').style.display='block';
+      return;
+    }
+  }catch{}
   const u=document.getElementById('lu').value.trim();
   const p=document.getElementById('lp').value;
   const c=getCreds();
-  if(u===c.user&&p===c.pass){
-    sessionStorage.setItem(AK,'1');
+  const inputHash=await sha256(p);
+  const storedHash=c.passHash||(await sha256(c.pass||'rocket2024'));
+  if(u===c.user&&inputHash===storedHash){
+    localStorage.removeItem(LK);
+    const token=Math.random().toString(36).slice(2)+Date.now().toString(36);
+    sessionStorage.setItem(AK,token);
     document.getElementById('ls').style.display='none';
     document.getElementById('as').style.display='block';
     document.getElementById('sbar').style.display='flex';
+    startInactivityTimer();
     loadAll();
   }else{
-    const e=document.getElementById('lerr');e.style.display='block';
-    setTimeout(()=>e.style.display='none',3000);
+    try{
+      const lk=JSON.parse(localStorage.getItem(LK)||'{}');
+      const attempts=(lk.attempts||0)+1;
+      if(attempts>=MAX_ATTEMPTS){
+        localStorage.setItem(LK,JSON.stringify({attempts,until:Date.now()+LOCKOUT_MS}));
+        document.getElementById('lerr').textContent='Muitas tentativas. Acesso bloqueado por 30 minutos.';
+      }else{
+        localStorage.setItem(LK,JSON.stringify({attempts}));
+        document.getElementById('lerr').textContent=`Usuário ou senha incorretos. (${MAX_ATTEMPTS-attempts} tentativa${MAX_ATTEMPTS-attempts===1?'':'s'} restante${MAX_ATTEMPTS-attempts===1?'':'s'})`;
+      }
+    }catch{
+      document.getElementById('lerr').textContent='Usuário ou senha incorretos.';
+    }
+    document.getElementById('lerr').style.display='block';
   }
+}
+function startInactivityTimer(){
+  let t;
+  function reset(){
+    clearTimeout(t);
+    t=setTimeout(()=>{sessionStorage.removeItem(AK);location.reload();},30*60*1000);
+  }
+  ['click','keydown','mousemove','touchstart'].forEach(e=>document.addEventListener(e,reset,{passive:true}));
+  reset();
 }
 function doLogout(){
   sessionStorage.removeItem(AK);
@@ -862,7 +910,7 @@ function _showRecoverForm(){
   document.getElementById('ls').style.display='none';
 }
 
-function saveRecovery(){
+async function saveRecovery(){
   const nu=document.getElementById('rnew-user').value.trim();
   const np=document.getElementById('rnew-pass').value;
   const nc=document.getElementById('rnew-conf').value;
@@ -874,7 +922,7 @@ function saveRecovery(){
   if(!nu && !np){errEl.textContent='Informe pelo menos um campo para alterar.';errEl.style.display='block';return;}
   const cr=getCreds();
   if(nu) cr.user=nu;
-  if(np) cr.pass=np;
+  if(np){cr.passHash=await sha256(np);delete cr.pass;}
   localStorage.setItem(CK, JSON.stringify(cr));
   // token is self-validating, no localStorage cleanup needed
   okEl.textContent='✅ Acesso atualizado! Redirecionando...';
@@ -1666,7 +1714,7 @@ function markClean(){
 }
 
 // ── SAVE ─────────────────────────────────────
-function save(){
+async function save(){
   const btn=document.getElementById('sbtn');btn.disabled=true;btn.textContent='⏳ Salvando...';
   try{
     // Senha
@@ -1679,7 +1727,7 @@ function save(){
     const cr=getCreds();
     const nu=document.getElementById('new-user').value.trim();
     if(nu)cr.user=nu;
-    if(np)cr.pass=np;
+    if(np){cr.passHash=await sha256(np);delete cr.pass;}
     cr.recEmail1=document.getElementById('rec-e1').value.trim();
     cr.recEmail2=document.getElementById('rec-e2').value.trim();
     cr.recWhatsapp=document.getElementById('rec-wpp').value.trim();
