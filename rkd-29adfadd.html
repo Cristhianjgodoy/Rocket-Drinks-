@@ -590,8 +590,8 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 
 <div class="sbar" id="sbar" style="display:none;">
   <div class="sstatus dirty" id="sstatus">● Alterações não salvas</div>
-  <button class="sbtn" id="sbtn" onclick="save()">💾 Salvar Alterações</button>
-  <button class="sbtn" id="pbtn" onclick="publicarNoSite()" style="background:var(--card);border:1px solid var(--gold);color:var(--gold);margin-left:8px;">🚀 Publicar no Site</button>
+  <button class="sbtn" id="sbtn" onclick="save()">💾 Salvar e Publicar</button>
+  <button class="sbtn" id="pbtn" onclick="publicarNoSite()" style="background:var(--card);border:1px solid var(--gold);color:var(--gold);margin-left:8px;display:none;">🚀 Publicar no Site</button>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1739,8 +1739,8 @@ function save(){
     const np=document.getElementById('new-pass').value;
     const cp=document.getElementById('conf-pass').value;
     if(np){
-      if(np!==cp){toast('⚠ As senhas não conferem!','var(--danger)');btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';return;}
-      if(np.length<4){toast('⚠ Senha muito curta (mín. 4)','var(--danger)');btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';return;}
+      if(np!==cp){toast('⚠ As senhas não conferem!','var(--danger)');btn.disabled=false;btn.innerHTML='💾 Salvar e Publicar';return;}
+      if(np.length<4){toast('⚠ Senha muito curta (mín. 4)','var(--danger)');btn.disabled=false;btn.innerHTML='💾 Salvar e Publicar';return;}
     }
     const cr=getCreds();
     const nu=document.getElementById('new-user').value.trim();
@@ -1868,9 +1868,18 @@ function save(){
     localStorage.setItem(SK,JSON.stringify(ovSlim));
     Object.keys(pendingPhotos).forEach(id=>{if(cfg.drinks[id])cfg.drinks[id].foto=pendingPhotos[id];});
     pendingPhotos={};pendingSlides={};pendingAdicSlides={};
-    markClean();toast('✓ Salvo com sucesso!','var(--ok)');
-  }catch(e){console.error(e);toast('⚠ Erro: '+e.message,'var(--danger)');}
-  btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';
+    markClean();
+    // Auto-publish to GitHub if token is configured
+    if(getGhToken()){
+      toast('⏳ Salvando e publicando...','var(--gold)');
+      doPublicar().then(function(){
+        btn.disabled=false;btn.innerHTML='💾 Salvar e Publicar';
+      });
+    } else {
+      toast('✓ Salvo! Clique em "Publicar no Site" para ir ao ar.','var(--ok)');
+      btn.disabled=false;btn.innerHTML='💾 Salvar e Publicar';
+    }
+  }catch(e){console.error(e);toast('⚠ Erro: '+e.message,'var(--danger)');btn.disabled=false;btn.innerHTML='💾 Salvar e Publicar';}
 }
 
 // ── PUBLICAR NO SITE ─────────────────────────
@@ -2009,7 +2018,7 @@ async function doPublicar(){
     console.error(e);
     toast('⚠ '+e.message,'var(--danger)');
   }
-  pb.disabled=false;pb.textContent='🚀 Publicar no Site';
+  if(pb)pb.disabled=false;if(pb)pb.textContent='🚀 Publicar no Site';
 }
 
 // ── ADICIONAIS SLIDES ────────────────────────
