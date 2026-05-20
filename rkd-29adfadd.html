@@ -590,8 +590,8 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 
 <div class="sbar" id="sbar" style="display:none;">
   <div class="sstatus dirty" id="sstatus">● Alterações não salvas</div>
-  <button class="sbtn" id="sbtn" onclick="save()">💾 Salvar e Publicar</button>
-  <button class="sbtn" id="pbtn" onclick="publicarNoSite()" style="background:var(--card);border:1px solid var(--gold);color:var(--gold);margin-left:8px;display:none;">🚀 Publicar no Site</button>
+  <button class="sbtn" id="sbtn" onclick="save()">💾 Salvar Alterações</button>
+  <button class="sbtn" id="pbtn" onclick="publicarNoSite()" style="background:var(--card);border:1px solid var(--gold);color:var(--gold);margin-left:8px;">🚀 Publicar no Site</button>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1739,8 +1739,8 @@ function save(){
     const np=document.getElementById('new-pass').value;
     const cp=document.getElementById('conf-pass').value;
     if(np){
-      if(np!==cp){toast('⚠ As senhas não conferem!','var(--danger)');btn.disabled=false;btn.innerHTML='💾 Salvar e Publicar';return;}
-      if(np.length<4){toast('⚠ Senha muito curta (mín. 4)','var(--danger)');btn.disabled=false;btn.innerHTML='💾 Salvar e Publicar';return;}
+      if(np!==cp){toast('⚠ As senhas não conferem!','var(--danger)');btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';return;}
+      if(np.length<4){toast('⚠ Senha muito curta (mín. 4)','var(--danger)');btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';return;}
     }
     const cr=getCreds();
     const nu=document.getElementById('new-user').value.trim();
@@ -1868,18 +1868,8 @@ function save(){
     localStorage.setItem(SK,JSON.stringify(ovSlim));
     Object.keys(pendingPhotos).forEach(id=>{if(cfg.drinks[id])cfg.drinks[id].foto=pendingPhotos[id];});
     pendingPhotos={};pendingSlides={};pendingAdicSlides={};
-    markClean();
-    // Auto-publish to GitHub if token is configured
-    if(getGhToken()){
-      toast('⏳ Salvando e publicando...','var(--gold)');
-      doPublicar().then(function(){
-        btn.disabled=false;btn.innerHTML='💾 Salvar e Publicar';
-      });
-    } else {
-      toast('✓ Salvo! Clique em "Publicar no Site" para ir ao ar.','var(--ok)');
-      btn.disabled=false;btn.innerHTML='💾 Salvar e Publicar';
-    }
-  }catch(e){console.error(e);toast('⚠ Erro: '+e.message,'var(--danger)');btn.disabled=false;btn.innerHTML='💾 Salvar e Publicar';}
+    markClean();toast('✓ Salvo! Clique em "Publicar no Site" para ir ao ar.','var(--ok)');
+  }catch(e){console.error(e);toast('⚠ Erro: '+e.message,'var(--danger)');}
 }
 
 // ── PUBLICAR NO SITE ─────────────────────────
@@ -1959,42 +1949,44 @@ async function doPublicar(){
       if(!r.ok){const e=await r.json();throw new Error('Erro ao salvar '+path+': '+(e.message||r.status));}
     }
 
-    // Helper: upload base64 data URL as image file, return raw GitHub URL
+    // Helper: upload base64 data URL as image file
+    // Returns GitHub Pages URL (same domain = sem CSP, sem cache de CDN externo)
     async function uploadImg(dataUrl,path){
       if(!dataUrl||!dataUrl.startsWith('data:'))return dataUrl;
       const base64=dataUrl.split(',')[1];
       await ghPut(path,base64,'Imagem via admin Rocket Drinks');
-      return `https://raw.githubusercontent.com/${GH_REPO_OWNER}/${GH_REPO_NAME}/main/${path}?v=${Date.now()}`;
+      return `https://rocketdrinks.com.br/${path}?v=${Date.now()}`;
     }
 
-    // 1. Upload images and replace base64 with GitHub URLs
+    // 1. Upload imagens em PARALELO (muito mais rápido)
     let imgCount=0;
+    const uploadTasks=[];
+
     if(ov.barSlides){
-      for(let i=0;i<ov.barSlides.length;i++){
-        if(ov.barSlides[i]&&ov.barSlides[i].startsWith('data:')){
-          pb.textContent=`⏳ Foto bar ${i+1}/${ov.barSlides.length}...`;
-          ov.barSlides[i]=await uploadImg(ov.barSlides[i],`images/bar-${i}.jpg`);
-          imgCount++;
+      ov.barSlides.forEach(function(src,i){
+        if(src&&src.startsWith('data:')){
+          uploadTasks.push(uploadImg(src,`images/bar-${i}.jpg`).then(function(url){ov.barSlides[i]=url;imgCount++;}));
         }
-      }
+      });
     }
     if(ov.adicSlides){
-      for(let i=0;i<ov.adicSlides.length;i++){
-        if(ov.adicSlides[i]&&ov.adicSlides[i].startsWith('data:')){
-          pb.textContent=`⏳ Foto adicional ${i+1}/${ov.adicSlides.length}...`;
-          ov.adicSlides[i]=await uploadImg(ov.adicSlides[i],`images/adicional-${i}.jpg`);
-          imgCount++;
+      ov.adicSlides.forEach(function(src,i){
+        if(src&&src.startsWith('data:')){
+          uploadTasks.push(uploadImg(src,`images/adicional-${i}.jpg`).then(function(url){ov.adicSlides[i]=url;imgCount++;}));
         }
-      }
+      });
     }
     if(ov.drinks){
-      for(const id of Object.keys(ov.drinks)){
+      Object.keys(ov.drinks).forEach(function(id){
         if(ov.drinks[id]&&ov.drinks[id].foto&&ov.drinks[id].foto.startsWith('data:')){
-          pb.textContent=`⏳ Foto drink ${id}...`;
-          ov.drinks[id].foto=await uploadImg(ov.drinks[id].foto,`images/drink-${id}.jpg`);
-          imgCount++;
+          uploadTasks.push(uploadImg(ov.drinks[id].foto,`images/drink-${id}.jpg`).then(function(url){ov.drinks[id].foto=url;imgCount++;}));
         }
-      }
+      });
+    }
+
+    if(uploadTasks.length>0){
+      pb.textContent=`⏳ Enviando ${uploadTasks.length} foto(s)...`;
+      await Promise.all(uploadTasks);
     }
 
     // 2. Save rocket-config.json (small file, only text + image URLs)
@@ -2005,14 +1997,20 @@ async function doPublicar(){
     // 3. Update localStorage with URL-based config (so next publish skips re-upload)
     // Save slim version (no images) to main key; images go to split keys (already github-raw)
     const ovSlimPub=JSON.parse(JSON.stringify(ov));
-    localStorage.setItem('rocketBarSlides',JSON.stringify(ovSlimPub.barSlides||[]));
-    localStorage.setItem('rocketAdicSlides',JSON.stringify(ovSlimPub.adicSlides||[]));
-    const pubPhotos={};if(ovSlimPub.drinks)Object.keys(ovSlimPub.drinks).forEach(id=>{if(ovSlimPub.drinks[id]&&ovSlimPub.drinks[id].foto){pubPhotos[id]=ovSlimPub.drinks[id].foto;delete ovSlimPub.drinks[id].foto;}});
+    // Salva config local com as URLs novas (para o admin ver no orçamento também)
+    localStorage.setItem('rocketBarSlides',JSON.stringify(ov.barSlides||[]));
+    localStorage.setItem('rocketAdicSlides',JSON.stringify(ov.adicSlides||[]));
+    const pubPhotos={};
+    const ovSlimPub2=JSON.parse(JSON.stringify(ov));
+    if(ovSlimPub2.drinks)Object.keys(ovSlimPub2.drinks).forEach(id=>{if(ovSlimPub2.drinks[id]&&ovSlimPub2.drinks[id].foto){pubPhotos[id]=ovSlimPub2.drinks[id].foto;delete ovSlimPub2.drinks[id].foto;}});
     localStorage.setItem('rocketDrinkPhotos',JSON.stringify(pubPhotos));
-    delete ovSlimPub.barSlides;delete ovSlimPub.adicSlides;
-    localStorage.setItem(SK,JSON.stringify(ovSlimPub));
+    delete ovSlimPub2.barSlides;delete ovSlimPub2.adicSlides;
+    localStorage.setItem(SK,JSON.stringify(ovSlimPub2));
+    // Também atualiza rocketDrinksConfig com o config completo publicado
+    // para que o orçamento do admin mostre as fotos novas imediatamente
+    localStorage.setItem('rocketDrinksConfig',JSON.stringify(ov));
 
-    const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) enviada(s). Aguarde ~1 min.`:'✅ Configuração publicada! Aguarde ~1 min.';
+    const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) no ar em ~30s.`:'✅ Publicado! Atualiza em ~30s.';
     toast(msg,'var(--ok)');
   }catch(e){
     console.error(e);
