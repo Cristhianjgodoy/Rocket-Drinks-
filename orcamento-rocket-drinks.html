@@ -2109,10 +2109,6 @@ try{
     if (!stored) return;
     const ov = JSON.parse(stored);
     if (!ov) return;
-    // Merge split image keys (used when admin saves before publishing)
-    try{const bs=localStorage.getItem('rocketBarSlides');if(bs&&!ov.barSlides){ov.barSlides=JSON.parse(bs);}else if(bs){const p=JSON.parse(bs);p.forEach(function(v,i){if(v)ov.barSlides[i]=v;});}}catch(e){}
-    try{const as_=localStorage.getItem('rocketAdicSlides');if(as_&&!ov.adicSlides){ov.adicSlides=JSON.parse(as_);}else if(as_){const p=JSON.parse(as_);p.forEach(function(v,i){if(v)ov.adicSlides[i]=v;});}}catch(e){}
-    try{const dp=localStorage.getItem('rocketDrinkPhotos');if(dp){const ph=JSON.parse(dp);if(ov.drinks)Object.keys(ph).forEach(function(id){if(ov.drinks[id])ov.drinks[id].foto=ph[id];});}}catch(e){}
 
     // ── Empresa ──
     if (ov.empresa)  CONFIG.empresa  = ov.empresa;

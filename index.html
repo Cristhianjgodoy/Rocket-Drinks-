@@ -10,14 +10,11 @@
 <script>
 (async function(){
   try{
-    // Carrega configuração publicada para visitantes (clientes)
-    // Não sobrescreve se for o dispositivo do admin
-    if(!localStorage.getItem('rocketAdminCreds')){
-      const r=await fetch('rocket-config.json?t='+Date.now());
-      if(r.ok){
-        const cfg=await r.text();
-        localStorage.setItem('rocketDrinksConfig',cfg);
-      }
+    // Sempre busca o config publicado — garante que admin e visitantes vejam o mesmo
+    const r=await fetch('rocket-config.json?t='+Date.now());
+    if(r.ok){
+      const cfg=await r.text();
+      localStorage.setItem('rocketDrinksConfig',cfg);
     }
   }catch(e){}
   // Acesso direto ao admin via hash secreto
