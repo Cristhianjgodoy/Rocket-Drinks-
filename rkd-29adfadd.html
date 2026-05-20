@@ -956,10 +956,16 @@ let cfg={}, pendingPhotos={}, pendingSlides={}, pendingAdicSlides={}, defaultPho
 function loadAll(){
   let stored={};
   try{stored=JSON.parse(localStorage.getItem(SK))||{};}catch{}
-  // Merge split image storage back into stored config
-  try{const bs=localStorage.getItem('rocketBarSlides');if(bs)stored.barSlides=JSON.parse(bs);}catch(e){}
-  try{const as_=localStorage.getItem('rocketAdicSlides');if(as_)stored.adicSlides=JSON.parse(as_);}catch(e){}
-  try{const dp=localStorage.getItem('rocketDrinkPhotos');if(dp){const ph=JSON.parse(dp);if(!stored.drinks)stored.drinks={};Object.keys(ph).forEach(id=>{if(!stored.drinks[id])stored.drinks[id]={};stored.drinks[id].foto=ph[id];});}}catch(e){}
+  // Migração única: se SK não tem barSlides/adicSlides (sistema antigo de split-keys),
+  // lê das chaves legadas para não perder as fotos customizadas
+  if(!stored.barSlides){try{const bs=localStorage.getItem('rocketBarSlides');if(bs)stored.barSlides=JSON.parse(bs);}catch(e){}}
+  if(!stored.adicSlides){try{const as_=localStorage.getItem('rocketAdicSlides');if(as_)stored.adicSlides=JSON.parse(as_);}catch(e){}}
+  if(stored.drinks){
+    const allEmpty=Object.values(stored.drinks).every(function(d){return !d||!d.foto;});
+    if(allEmpty){try{const dp=localStorage.getItem('rocketDrinkPhotos');if(dp){const ph=JSON.parse(dp);Object.keys(ph).forEach(function(id){if(!stored.drinks[id])stored.drinks[id]={};stored.drinks[id].foto=ph[id];});}}catch(e){}}
+  } else {
+    try{const dp=localStorage.getItem('rocketDrinkPhotos');if(dp){const ph=JSON.parse(dp);stored.drinks={};Object.keys(ph).forEach(function(id){stored.drinks[id]={foto:ph[id]};});}}catch(e){}
+  }
   cfg=JSON.parse(JSON.stringify(DEF));
   // Merge
   if(stored.empresa) cfg.empresa=stored.empresa;
@@ -1856,16 +1862,11 @@ function save(){
       cfg.equipe=equipeData;
     }
 
-    // Split image data into separate keys to avoid 5MB localStorage quota
-    const ovSlim=JSON.parse(JSON.stringify(ov));
-    localStorage.setItem('rocketBarSlides',JSON.stringify(ovSlim.barSlides||[]));
-    delete ovSlim.barSlides;
-    localStorage.setItem('rocketAdicSlides',JSON.stringify(ovSlim.adicSlides||[]));
-    delete ovSlim.adicSlides;
-    const drinkPhotos={};
-    if(ovSlim.drinks){Object.keys(ovSlim.drinks).forEach(id=>{if(ovSlim.drinks[id]&&ovSlim.drinks[id].foto){drinkPhotos[id]=ovSlim.drinks[id].foto;delete ovSlim.drinks[id].foto;}});}
-    localStorage.setItem('rocketDrinkPhotos',JSON.stringify(drinkPhotos));
-    localStorage.setItem(SK,JSON.stringify(ovSlim));
+    localStorage.setItem(SK,JSON.stringify(ov));
+    // Limpa chaves antigas de split-storage (migração)
+    localStorage.removeItem('rocketBarSlides');
+    localStorage.removeItem('rocketAdicSlides');
+    localStorage.removeItem('rocketDrinkPhotos');
     Object.keys(pendingPhotos).forEach(id=>{if(cfg.drinks[id])cfg.drinks[id].foto=pendingPhotos[id];});
     pendingPhotos={};pendingSlides={};pendingAdicSlides={};
     markClean();toast('✓ Salvo! Clique em "Publicar no Site" para ir ao ar.','var(--ok)');
@@ -1920,62 +1921,55 @@ async function doPublicar(){
   const token=getGhToken();
   if(!token){openGhTokenModal();return;}
   const pb=document.getElementById('pbtn');
-  pb.disabled=true;pb.textContent='⏳ Publicando...';
+  pb.disabled=true;pb.textContent='⏳ Verificando token...';
   try{
-    // Verify token first
-    const verResp=await fetch(`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}`,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    // 1. Verificar token
+    const verResp=await fetch(`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}`,
+      {headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
     if(!verResp.ok){
       localStorage.removeItem(GH_TOKEN_KEY);
-      throw new Error('Token inválido ou sem permissão. Clique em Publicar novamente para configurar.');
+      throw new Error('Token inválido. Clique em Publicar novamente para configurar o token.');
     }
 
     const ov=JSON.parse(stored);
-    // Merge split image storage back before publishing
-    try{const bs=localStorage.getItem('rocketBarSlides');if(bs){const imgs=JSON.parse(bs);if(!ov.barSlides)ov.barSlides=imgs;else imgs.forEach((v,i)=>{if(v)ov.barSlides[i]=v;});}}catch(e){}
-    try{const as_=localStorage.getItem('rocketAdicSlides');if(as_){const imgs=JSON.parse(as_);if(!ov.adicSlides)ov.adicSlides=imgs;else imgs.forEach((v,i)=>{if(v)ov.adicSlides[i]=v;});}}catch(e){}
-    try{const dp=localStorage.getItem('rocketDrinkPhotos');if(dp){const ph=JSON.parse(dp);if(!ov.drinks)ov.drinks={};Object.keys(ph).forEach(id=>{if(!ov.drinks[id])ov.drinks[id]={};if(!ov.drinks[id].foto||ov.drinks[id].foto.startsWith('data:'))ov.drinks[id].foto=ph[id];});}}catch(e){}
 
-    // Helper: upload or update a file on GitHub
+    // Helper: criar ou atualizar arquivo no GitHub
     async function ghPut(path,base64Content,msg){
       const url=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/${path}`;
       const headers={'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
       let sha;
       const existing=await fetch(url,{headers});
       if(existing.ok){const d=await existing.json();sha=d.sha;}
-      else if(existing.status!==404){throw new Error('Erro GitHub '+existing.status+' ao verificar '+path);}
+      else if(existing.status!==404){throw new Error('GitHub '+existing.status+' ao verificar '+path);}
       const body={message:msg||'Admin update',content:base64Content};
       if(sha)body.sha=sha;
       const r=await fetch(url,{method:'PUT',headers,body:JSON.stringify(body)});
       if(!r.ok){const e=await r.json();throw new Error('Erro ao salvar '+path+': '+(e.message||r.status));}
     }
 
-    // Helper: upload base64 data URL as image file
-    // Returns GitHub Pages URL (same domain = sem CSP, sem cache de CDN externo)
+    // Helper: faz upload de data:URL e retorna URL pública do GitHub Pages
     async function uploadImg(dataUrl,path){
       if(!dataUrl||!dataUrl.startsWith('data:'))return dataUrl;
       const base64=dataUrl.split(',')[1];
-      await ghPut(path,base64,'Imagem via admin Rocket Drinks');
+      await ghPut(path,base64,'Foto via admin');
       return `https://rocketdrinks.com.br/${path}?v=${Date.now()}`;
     }
 
-    // 1. Upload imagens em PARALELO (muito mais rápido)
+    // 2. Upload de imagens em paralelo (apenas as que são data:URL)
     let imgCount=0;
     const uploadTasks=[];
+    pb.textContent='⏳ Preparando fotos...';
 
-    if(ov.barSlides){
-      ov.barSlides.forEach(function(src,i){
-        if(src&&src.startsWith('data:')){
-          uploadTasks.push(uploadImg(src,`images/bar-${i}.jpg`).then(function(url){ov.barSlides[i]=url;imgCount++;}));
-        }
-      });
-    }
-    if(ov.adicSlides){
-      ov.adicSlides.forEach(function(src,i){
-        if(src&&src.startsWith('data:')){
-          uploadTasks.push(uploadImg(src,`images/adicional-${i}.jpg`).then(function(url){ov.adicSlides[i]=url;imgCount++;}));
-        }
-      });
-    }
+    (ov.barSlides||[]).forEach(function(src,i){
+      if(src&&src.startsWith('data:')){
+        uploadTasks.push(uploadImg(src,`images/bar-${i}.jpg`).then(function(url){ov.barSlides[i]=url;imgCount++;}));
+      }
+    });
+    (ov.adicSlides||[]).forEach(function(src,i){
+      if(src&&src.startsWith('data:')){
+        uploadTasks.push(uploadImg(src,`images/adicional-${i}.jpg`).then(function(url){ov.adicSlides[i]=url;imgCount++;}));
+      }
+    });
     if(ov.drinks){
       Object.keys(ov.drinks).forEach(function(id){
         if(ov.drinks[id]&&ov.drinks[id].foto&&ov.drinks[id].foto.startsWith('data:')){
@@ -1989,34 +1983,27 @@ async function doPublicar(){
       await Promise.all(uploadTasks);
     }
 
-    // 2. Save rocket-config.json (small file, only text + image URLs)
-    pb.textContent='⏳ Salvando configuração...';
-    const configBase64=btoa(unescape(encodeURIComponent(JSON.stringify(ov))));
-    await ghPut('rocket-config.json',configBase64,'Config via admin Rocket Drinks');
+    // 3. Salva rocket-config.json no GitHub
+    pb.textContent='⏳ Publicando configuração...';
+    const configStr=JSON.stringify(ov);
+    const configBase64=btoa(unescape(encodeURIComponent(configStr)));
+    await ghPut('rocket-config.json',configBase64,'Config via admin');
 
-    // 3. Update localStorage with URL-based config (so next publish skips re-upload)
-    // Save slim version (no images) to main key; images go to split keys (already github-raw)
-    const ovSlimPub=JSON.parse(JSON.stringify(ov));
-    // Salva config local com as URLs novas (para o admin ver no orçamento também)
-    localStorage.setItem('rocketBarSlides',JSON.stringify(ov.barSlides||[]));
-    localStorage.setItem('rocketAdicSlides',JSON.stringify(ov.adicSlides||[]));
-    const pubPhotos={};
-    const ovSlimPub2=JSON.parse(JSON.stringify(ov));
-    if(ovSlimPub2.drinks)Object.keys(ovSlimPub2.drinks).forEach(id=>{if(ovSlimPub2.drinks[id]&&ovSlimPub2.drinks[id].foto){pubPhotos[id]=ovSlimPub2.drinks[id].foto;delete ovSlimPub2.drinks[id].foto;}});
-    localStorage.setItem('rocketDrinkPhotos',JSON.stringify(pubPhotos));
-    delete ovSlimPub2.barSlides;delete ovSlimPub2.adicSlides;
-    localStorage.setItem(SK,JSON.stringify(ovSlimPub2));
-    // Também atualiza rocketDrinksConfig com o config completo publicado
-    // para que o orçamento do admin mostre as fotos novas imediatamente
-    localStorage.setItem('rocketDrinksConfig',JSON.stringify(ov));
+    // 4. Atualiza localStorage — fonte única de verdade
+    localStorage.setItem(SK,configStr);
+    localStorage.setItem('rocketDrinksConfig',configStr);
+    // Garante que chaves antigas de split-storage não causem confusão
+    localStorage.removeItem('rocketBarSlides');
+    localStorage.removeItem('rocketAdicSlides');
+    localStorage.removeItem('rocketDrinkPhotos');
 
-    const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) no ar em ~30s.`:'✅ Publicado! Atualiza em ~30s.';
+    const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) no ar em ~30s.`:'✅ Publicado! Site atualiza em ~30s.';
     toast(msg,'var(--ok)');
   }catch(e){
-    console.error(e);
+    console.error('doPublicar error:',e);
     toast('⚠ '+e.message,'var(--danger)');
   }
-  if(pb)pb.disabled=false;if(pb)pb.textContent='🚀 Publicar no Site';
+  if(pb){pb.disabled=false;pb.textContent='🚀 Publicar no Site';}
 }
 
 // ── ADICIONAIS SLIDES ────────────────────────
