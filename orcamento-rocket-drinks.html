@@ -2103,9 +2103,11 @@ try{
 // =========================================================
 //  ADMIN CONFIG OVERRIDE (from embed or localStorage)
 // =========================================================
-(function applyAdminOverrides() {
+window._applyAdminCfg = function(cfgOverride) {
   try {
-    const stored = localStorage.getItem('rocketDrinksConfig') || (typeof window.__ADMIN_CFG__ !== 'undefined' ? JSON.stringify(window.__ADMIN_CFG__) : null);
+    var stored;
+    if (cfgOverride) { stored = JSON.stringify(cfgOverride); }
+    else { stored = localStorage.getItem('rocketDrinksConfig') || (typeof window.__ADMIN_CFG__ !== 'undefined' ? JSON.stringify(window.__ADMIN_CFG__) : null); }
     if (!stored) return;
     const ov = JSON.parse(stored);
     if (!ov) return;
@@ -2242,7 +2244,8 @@ try{
   } catch(e) {
     console.warn('Admin config override failed:', e);
   }
-})();
+};
+window._applyAdminCfg();
 // =========================================================
 //  ESTADO
 // =========================================================
@@ -3514,8 +3517,8 @@ window._rkdApplyBarImgs = function(cfg) {
     fetch('/rocket-config.json?_=' + Date.now(), {cache:'no-store'})
       .then(function(r){ return r.json(); })
       .then(function(cfg){
-        window._rkdApplyBarImgs(cfg);
         try { localStorage.setItem('rocketDrinksConfig', JSON.stringify(cfg)); } catch(e) {}
+        if (typeof window._applyAdminCfg==='function') { window._applyAdminCfg(cfg); } else { window._rkdApplyBarImgs(cfg); }
       })
       .catch(function(){});
   }
