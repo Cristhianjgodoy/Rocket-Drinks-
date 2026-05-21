@@ -3491,5 +3491,33 @@ setInterval(() => {
 })();
 </script>
 
+
+<script>
+/* ── APLICA IMAGENS DO BAR (independente de applyAdminOverrides) ── */
+(function _applyBarImgs() {
+  function apply() {
+    try {
+      var raw = localStorage.getItem('rocketDrinksConfig');
+      if (!raw) return;
+      var ov = JSON.parse(raw);
+      if (!ov) return;
+      if (ov.barSlides && Array.isArray(ov.barSlides)) {
+        var imgs = document.querySelectorAll('#bar-carousel-inner .bar-slide img');
+        ov.barSlides.forEach(function(src, i) {
+          if (imgs[i] && src && !src.startsWith('data:')) imgs[i].src = src;
+        });
+      }
+    } catch(e) {}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply);
+  } else {
+    apply();
+  }
+  window.addEventListener('load', apply);
+  setTimeout(apply, 300);
+  setTimeout(apply, 1000);
+})();
+<\/script>
 </body>
 </html>
