@@ -1994,11 +1994,11 @@ async function doPublicar(){
     const configBase64=btoa(unescape(encodeURIComponent(configStr)));
     const cfgBlob=await createBlob(configBase64);
     treeEntries.push({path:'rocket-config.json',mode:'100644',type:'blob',sha:cfgBlob.sha});
-    const ref=await ghAPI('GET',`${GH_BASE}/git/ref/heads/${GH_BRANCH}`);
+    const ref=await ghAPI('GET',`${GH_BASE}/git/ref/heads/main`);
     const headCommit=await ghAPI('GET',`${GH_BASE}/git/commits/${ref.object.sha}`);
     const newTree=await ghAPI('POST',`${GH_BASE}/git/trees`,{base_tree:headCommit.tree.sha,tree:treeEntries});
     const newCommit=await ghAPI('POST',`${GH_BASE}/git/commits`,{message:'Config e fotos via admin',tree:newTree.sha,parents:[ref.object.sha]});
-    await ghAPI('PATCH',`${GH_BASE}/git/refs/heads/${GH_BRANCH}`,{sha:newCommit.sha,force:true});
+    await ghAPI('PATCH',`${GH_BASE}/git/refs/heads/main`,{sha:newCommit.sha,force:true});
 
     // 4. Atualiza localStorage — fonte única de verdade
     localStorage.setItem(SK,configStr);
