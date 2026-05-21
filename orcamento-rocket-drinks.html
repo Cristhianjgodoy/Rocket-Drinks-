@@ -3518,7 +3518,8 @@ window._rkdApplyBarImgs = function(cfg) {
       .then(function(r){ return r.json(); })
       .then(function(cfg){
         try { localStorage.setItem('rocketDrinksConfig', JSON.stringify(cfg)); } catch(e) {}
-        if (typeof window._applyAdminCfg==='function') { window._applyAdminCfg(cfg); } else { window._rkdApplyBarImgs(cfg); }
+        if (typeof window._applyAdminCfg==='function') { window._applyAdminCfg(cfg); }
+        window._rkdApplyBarImgs(cfg);
       })
       .catch(function(){});
   }
