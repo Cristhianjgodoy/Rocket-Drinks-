@@ -3499,11 +3499,40 @@ setInterval(() => {
 /* BAR IMG FIX */
 window._rkdApplyBarImgs = function(cfg) {
   try {
-    if (!cfg || !cfg.barSlides) return;
-    var imgs = document.querySelectorAll('#bar-carousel-inner .bar-slide img');
-    cfg.barSlides.forEach(function(src, i) {
-      if (imgs[i] && src && !src.startsWith('data:')) imgs[i].src = src;
-    });
+    if (!cfg) return;
+    if (cfg.barSlides) {
+      var imgs = document.querySelectorAll('#bar-carousel-inner .bar-slide img');
+      cfg.barSlides.forEach(function(src, i) {
+        if (imgs[i] && src && !src.startsWith('data:')) imgs[i].src = src;
+      });
+    }
+    var adicSrcs = cfg.adicSlides || (cfg.adicionais && cfg.adicionais.slides);
+    if (adicSrcs && Array.isArray(adicSrcs) && adicSrcs.length > 0) {
+      var aC = document.getElementById('adic-carousel-inner');
+      if (aC) {
+        aC.innerHTML = '';
+        var vS = adicSrcs.filter(function(s){ return !!s; });
+        vS.forEach(function(src, i) {
+          var sl = document.createElement('div');
+          sl.className = 'bar-slide' + (i === 0 ? ' active' : '');
+          sl.id = 'adic-slide-' + i;
+          var im = document.createElement('img');
+          im.src = src;
+          sl.appendChild(im);
+          aC.appendChild(sl);
+        });
+        var dd = document.createElement('div');
+        dd.className = 'bar-dots';
+        dd.id = 'adic-dots';
+        vS.forEach(function(_, i) {
+          var d = document.createElement('span');
+          d.className = 'bar-dot' + (i === 0 ? ' active' : '');
+          d.setAttribute('onclick', 'adicSlideTo(' + i + ')');
+          dd.appendChild(d);
+        });
+        aC.appendChild(dd);
+      }
+    }
   } catch(e) {}
 };
 (function() {
