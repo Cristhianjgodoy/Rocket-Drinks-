@@ -1938,7 +1938,7 @@ async function doPublicar(){
       const url=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/${path}`;
       const headers={'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
       let sha;
-      const existing=await fetch(url,{headers});
+      const existing=await fetch(url,{headers,cache:'no-store'});
       if(existing.ok){const d=await existing.json();sha=d.sha;}
       else if(existing.status!==404){throw new Error('GitHub '+existing.status+' ao verificar '+path);}
       const body={message:msg||'Admin update',content:base64Content};
