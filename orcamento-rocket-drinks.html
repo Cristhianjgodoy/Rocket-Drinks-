@@ -2192,11 +2192,14 @@ try{
         if (CONFIG.adicionais) CONFIG.adicionais.slides = _adicSrcs;
       }
     };
+    // Garante que roda DEPOIS de qualquer init do carrossel
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', _applySlides);
+      document.addEventListener('DOMContentLoaded', function(){ setTimeout(_applySlides, 150); });
     } else {
-      _applySlides();
+      setTimeout(_applySlides, 150);
     }
+    // Segunda passagem de segurança
+    setTimeout(_applySlides, 600);
 
     // ── Bar models (modelos de bar) ──
     if (ov.barModels) {
