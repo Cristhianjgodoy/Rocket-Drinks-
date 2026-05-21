@@ -2878,18 +2878,18 @@ function selectBarStructure(el, name) {
 // =========================================================
 (function() {
   let current = 0;
-  const total = 6;
   let timer = null;
 
   function slideTo(n) {
-    const slides = document.querySelectorAll('.bar-slide');
-    const dots   = document.querySelectorAll('.bar-dot');
-    if (!slides.length) return;
-    slides[current].classList.remove('active');
-    dots[current] && dots[current].classList.remove('active');
-    current = (n + total) % total;
+    const slides = document.querySelectorAll('#bar-carousel-inner .bar-slide');
+    const dots   = document.querySelectorAll('#bar-dots .bar-dot');
+    const total  = slides.length;
+    if (!total) return;
+    slides[current] && slides[current].classList.remove('active');
+    dots[current]   && dots[current].classList.remove('active');
+    current = ((n % total) + total) % total;
     slides[current].classList.add('active');
-    dots[current] && dots[current].classList.add('active');
+    dots[current]   && dots[current].classList.add('active');
   }
 
   window.slideTo = slideTo;
@@ -3500,12 +3500,33 @@ setInterval(() => {
 window._rkdApplyBarImgs = function(cfg) {
   try {
     if (!cfg) return;
-    if (cfg.barSlides) {
-      var imgs = document.querySelectorAll('#bar-carousel-inner .bar-slide img');
-      cfg.barSlides.forEach(function(src, i) {
-        if (imgs[i] && src && !src.startsWith('data:')) imgs[i].src = src;
-      });
+    // Bar carousel — reconstroi dinamicamente igual ao admin
+    if (cfg.barSlides && cfg.barSlides.length > 0) {
+      var bC = document.getElementById('bar-carousel-inner');
+      if (bC) {
+        bC.innerHTML = '';
+        var vBS = cfg.barSlides.filter(function(s){ return !!s; });
+        vBS.forEach(function(src, i) {
+          var sl = document.createElement('div');
+          sl.className = 'bar-slide' + (i === 0 ? ' active' : '');
+          var im = document.createElement('img');
+          im.src = src;
+          sl.appendChild(im);
+          bC.appendChild(sl);
+        });
+        var bdots = document.createElement('div');
+        bdots.className = 'bar-dots';
+        bdots.id = 'bar-dots';
+        vBS.forEach(function(_, i) {
+          var d = document.createElement('div');
+          d.className = 'bar-dot' + (i === 0 ? ' active' : '');
+          d.setAttribute('onclick', 'slideTo(' + i + ')');
+          bdots.appendChild(d);
+        });
+        bC.appendChild(bdots);
+      }
     }
+    // Adicionais carousel
     var adicSrcs = cfg.adicSlides || (cfg.adicionais && cfg.adicionais.slides);
     if (adicSrcs && Array.isArray(adicSrcs) && adicSrcs.length > 0) {
       var aC = document.getElementById('adic-carousel-inner');
