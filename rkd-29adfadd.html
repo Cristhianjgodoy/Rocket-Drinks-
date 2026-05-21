@@ -1933,18 +1933,32 @@ async function doPublicar(){
 
     const ov=JSON.parse(stored);
 
-    // Helper: criar ou atualizar arquivo no GitHub
+    // Helper: criar ou atualizar arquivo no GitHub (com retry em conflito de SHA)
     async function ghPut(path,base64Content,msg){
       const url=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/${path}`;
       const headers={'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
-      let sha;
-      const existing=await fetch(url,{headers,cache:'no-store'});
-      if(existing.ok){const d=await existing.json();sha=d.sha;}
-      else if(existing.status!==404){throw new Error('GitHub '+existing.status+' ao verificar '+path);}
-      const body={message:msg||'Admin update',content:base64Content};
-      if(sha)body.sha=sha;
-      const r=await fetch(url,{method:'PUT',headers,body:JSON.stringify(body)});
-      if(!r.ok){const e=await r.json();throw new Error('Erro ao salvar '+path+': '+(e.message||r.status));}
+      async function tryOnce(){
+        let sha;
+        // Timestamp no GET garante SHA fresco mesmo com CDN do GitHub
+        const existing=await fetch(url+'?_='+Date.now(),{headers,cache:'no-store'});
+        if(existing.ok){const d=await existing.json();sha=d.sha;}
+        else if(existing.status!==404){throw new Error('GitHub '+existing.status+' ao verificar '+path);}
+        const body={message:msg||'Admin update',content:base64Content};
+        if(sha)body.sha=sha;
+        const r=await fetch(url,{method:'PUT',headers,body:JSON.stringify(body)});
+        if(!r.ok){
+          const e=await r.json();
+          // Conflito de SHA: sinaliza para retry
+          if(e.message&&(e.message.includes('but expected')||e.message.includes('409')))return false;
+          throw new Error('Erro ao salvar '+path+': '+(e.message||r.status));
+        }
+        return true;
+      }
+      // Tenta 1x; em caso de conflito de SHA, aguarda e tenta novamente
+      if(!await tryOnce()){
+        await new Promise(res=>setTimeout(res,600));
+        await tryOnce();
+      }
     }
 
     // Helper: faz upload de data:URL e retorna URL pública do GitHub Pages
