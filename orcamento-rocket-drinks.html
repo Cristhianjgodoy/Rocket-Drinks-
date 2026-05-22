@@ -3563,6 +3563,17 @@ function _rkdApplyAll(cfg) {
   } else {
     init();
   }
+
+  /* Atualização instantânea quando admin publica no mesmo browser */
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'rocketDrinksConfig' && e.newValue) {
+      try {
+        var cfg = JSON.parse(e.newValue);
+        _lastText = e.newValue;
+        _rkdApplyAll(cfg);
+      } catch(err) {}
+    }
+  });
 })();
 </script>
 </body>

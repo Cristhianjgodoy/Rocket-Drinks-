@@ -10,20 +10,14 @@
 <script>
 (async function(){
   try{
-    // Sempre busca o config publicado — garante que admin e visitantes vejam o mesmo
-    const r=await fetch('rocket-config.json?t='+Date.now());
-    if(r.ok){
-      const cfg=await r.text();
-      localStorage.setItem('rocketDrinksConfig',cfg);
+    if(!localStorage.getItem('rocketDrinksConfig')){
+      const r=await fetch('rocket-config.json?t='+Date.now(),{cache:'no-store'});
+      if(r.ok){const cfg=await r.text();localStorage.setItem('rocketDrinksConfig',cfg);}
     }
   }catch(e){}
-  // Acesso direto ao admin via hash secreto
   var _h=location.hash;
-  if(_h==='#_adm'){
-    window.location.replace('rkd-29adfadd.html');
-  } else {
-    window.location.replace('orcamento-rocket-drinks.html'+(_h||''));
-  }
+  if(_h==='#_adm'){window.location.replace('rkd-29adfadd.html');}
+  else{window.location.replace('orcamento-rocket-drinks.html'+(_h||''));}
 })();
 </script>
 </body>
