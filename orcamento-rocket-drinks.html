@@ -3551,7 +3551,10 @@ function _rkdApplyAll(cfg) {
       var cached = localStorage.getItem('rocketDrinksConfig');
       if (cached) {
         _lastText = cached;
-        window._rkdApplyBarImgs(JSON.parse(cached));
+        var cfg = JSON.parse(cached);
+        /* Aplica textos/empresa/planos/drinks E imagens do carousel */
+        try { if (typeof window._applyAdminCfg === 'function') window._applyAdminCfg(cfg); } catch(e2) {}
+        try { window._rkdApplyBarImgs(cfg); } catch(e2) {}
       }
     } catch(e) {}
     poll();
