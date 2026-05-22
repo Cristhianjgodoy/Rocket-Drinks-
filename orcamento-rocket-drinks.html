@@ -2159,49 +2159,8 @@ window._applyAdminCfg = function(cfgOverride) {
       });
     }
 
-    // ── Bar slides + Adicionais slides (with DOMContentLoaded safety) ──
-    const _applySlides = function() {
-      if (ov.barSlides) {
-        const _bImgs = document.querySelectorAll('#bar-carousel-inner .bar-slide img');
-        ov.barSlides.forEach(function(src,i){ if(_bImgs[i]&&src) _bImgs[i].src=src; });
-      }
-      const _adicSrcs = ov.adicSlides || (ov.adicionais && ov.adicionais.slides);
-      if (_adicSrcs && Array.isArray(_adicSrcs)) {
-        const _aCarousel = document.getElementById('adic-carousel-inner');
-        if (_aCarousel && _adicSrcs.length > 0) {
-          _aCarousel.innerHTML = '';
-          var _validSrcs = _adicSrcs.filter(function(s){ return !!s; });
-          _validSrcs.forEach(function(src, i) {
-            var _slide = document.createElement('div');
-            _slide.className = 'bar-slide' + (i === 0 ? ' active' : '');
-            _slide.id = 'adic-slide-' + i;
-            var _img = document.createElement('img');
-            _img.src = src;
-            _slide.appendChild(_img);
-            _aCarousel.appendChild(_slide);
-          });
-          var _dotsDiv = document.createElement('div');
-          _dotsDiv.className = 'bar-dots';
-          _dotsDiv.id = 'adic-dots';
-          _validSrcs.forEach(function(_, i) {
-            var _dot = document.createElement('span');
-            _dot.className = 'bar-dot' + (i === 0 ? ' active' : '');
-            _dot.setAttribute('onclick', 'adicSlideTo(' + i + ')');
-            _dotsDiv.appendChild(_dot);
-          });
-          _aCarousel.appendChild(_dotsDiv);
-        }
-        if (CONFIG.adicionais) CONFIG.adicionais.slides = _adicSrcs;
-      }
-    };
-    // Garante que roda DEPOIS de qualquer init do carrossel
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function(){ setTimeout(_applySlides, 150); });
-    } else {
-      setTimeout(_applySlides, 150);
-    }
-    // Segunda passagem de segurança
-    setTimeout(_applySlides, 600);
+    // ── Bar slides + Adicionais slides ──
+    // Aplicado separadamente por _rkdApplyBarImgs após este bloco
 
     // ── Bar models (modelos de bar) ──
     if (ov.barModels) {
@@ -2898,10 +2857,12 @@ function selectBarStructure(el, name) {
     timer = setInterval(() => slideTo(current + 1), 7000);
   }
 
-  // Start after DOM ready
-  document.addEventListener('DOMContentLoaded', startSlide);
-  // Fallback if DOM already loaded
-  if (document.readyState !== 'loading') startSlide();
+  // Start após DOM pronto — apenas uma chamada
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startSlide);
+  } else {
+    startSlide();
+  }
 })();
 
 // =========================================================
@@ -3496,88 +3457,112 @@ setInterval(() => {
 
 
 <script>
-/* BAR IMG FIX */
+/* ═══════════════════════════════════════════════════════
+   AUTO-UPDATE — Reconstrução completa
+   Busca rocket-config.json a cada 30s e aplica mudanças
+   ═══════════════════════════════════════════════════════ */
+
+/* 1 ── Reconstrói carrossel do Bar */
+function _rkdBuildBar(slides) {
+  var bC = document.getElementById('bar-carousel-inner');
+  if (!bC || !slides || !slides.length) return;
+  bC.innerHTML = '';
+  var valid = slides.filter(function(s){ return !!s; });
+  valid.forEach(function(src, i) {
+    var sl = document.createElement('div');
+    sl.className = 'bar-slide' + (i === 0 ? ' active' : '');
+    var im = document.createElement('img'); im.src = src;
+    sl.appendChild(im); bC.appendChild(sl);
+  });
+  var dots = document.createElement('div');
+  dots.className = 'bar-dots'; dots.id = 'bar-dots';
+  valid.forEach(function(_, i) {
+    var d = document.createElement('div');
+    d.className = 'bar-dot' + (i === 0 ? ' active' : '');
+    d.setAttribute('onclick', 'slideTo(' + i + ')');
+    dots.appendChild(d);
+  });
+  bC.appendChild(dots);
+}
+
+/* 2 ── Reconstrói carrossel dos Adicionais */
+function _rkdBuildAdic(slides) {
+  var aC = document.getElementById('adic-carousel-inner');
+  if (!aC || !slides || !slides.length) return;
+  aC.innerHTML = '';
+  var valid = slides.filter(function(s){ return !!s; });
+  valid.forEach(function(src, i) {
+    var sl = document.createElement('div');
+    sl.className = 'bar-slide' + (i === 0 ? ' active' : '');
+    sl.id = 'adic-slide-' + i;
+    var im = document.createElement('img'); im.src = src;
+    sl.appendChild(im); aC.appendChild(sl);
+  });
+  var dots = document.createElement('div');
+  dots.className = 'bar-dots'; dots.id = 'adic-dots';
+  valid.forEach(function(_, i) {
+    var d = document.createElement('span');
+    d.className = 'bar-dot' + (i === 0 ? ' active' : '');
+    d.setAttribute('onclick', 'adicSlideTo(' + i + ')');
+    dots.appendChild(d);
+  });
+  aC.appendChild(dots);
+}
+
+/* 3 ── Aplica imagens (chamado externamente pelo _applyAdminCfg também) */
 window._rkdApplyBarImgs = function(cfg) {
-  try {
-    if (!cfg) return;
-    // Bar carousel — reconstroi dinamicamente igual ao admin
-    if (cfg.barSlides && cfg.barSlides.length > 0) {
-      var bC = document.getElementById('bar-carousel-inner');
-      if (bC) {
-        bC.innerHTML = '';
-        var vBS = cfg.barSlides.filter(function(s){ return !!s; });
-        vBS.forEach(function(src, i) {
-          var sl = document.createElement('div');
-          sl.className = 'bar-slide' + (i === 0 ? ' active' : '');
-          var im = document.createElement('img');
-          im.src = src;
-          sl.appendChild(im);
-          bC.appendChild(sl);
-        });
-        var bdots = document.createElement('div');
-        bdots.className = 'bar-dots';
-        bdots.id = 'bar-dots';
-        vBS.forEach(function(_, i) {
-          var d = document.createElement('div');
-          d.className = 'bar-dot' + (i === 0 ? ' active' : '');
-          d.setAttribute('onclick', 'slideTo(' + i + ')');
-          bdots.appendChild(d);
-        });
-        bC.appendChild(bdots);
-      }
-    }
-    // Adicionais carousel
-    var adicSrcs = cfg.adicSlides || (cfg.adicionais && cfg.adicionais.slides);
-    if (adicSrcs && Array.isArray(adicSrcs) && adicSrcs.length > 0) {
-      var aC = document.getElementById('adic-carousel-inner');
-      if (aC) {
-        aC.innerHTML = '';
-        var vS = adicSrcs.filter(function(s){ return !!s; });
-        vS.forEach(function(src, i) {
-          var sl = document.createElement('div');
-          sl.className = 'bar-slide' + (i === 0 ? ' active' : '');
-          sl.id = 'adic-slide-' + i;
-          var im = document.createElement('img');
-          im.src = src;
-          sl.appendChild(im);
-          aC.appendChild(sl);
-        });
-        var dd = document.createElement('div');
-        dd.className = 'bar-dots';
-        dd.id = 'adic-dots';
-        vS.forEach(function(_, i) {
-          var d = document.createElement('span');
-          d.className = 'bar-dot' + (i === 0 ? ' active' : '');
-          d.setAttribute('onclick', 'adicSlideTo(' + i + ')');
-          dd.appendChild(d);
-        });
-        aC.appendChild(dd);
-      }
-    }
-  } catch(e) {}
+  if (!cfg) return;
+  if (cfg.barSlides  && cfg.barSlides.length)  _rkdBuildBar(cfg.barSlides);
+  var adic = cfg.adicSlides || (cfg.adicionais && cfg.adicionais.slides);
+  if (adic && adic.length) _rkdBuildAdic(adic);
 };
+
+/* 4 ── Aplica config completo: textos + fotos */
+function _rkdApplyAll(cfg) {
+  try { if (typeof window._applyAdminCfg === 'function') window._applyAdminCfg(cfg); } catch(e) {}
+  try { window._rkdApplyBarImgs(cfg); } catch(e) {}
+  try { localStorage.setItem('rocketDrinksConfig', JSON.stringify(cfg)); } catch(e) {}
+}
+
+/* 5 ── Polling: busca /rocket-config.json a cada 30s */
 (function() {
-  function applyFromStorage() {
-    try {
-      var raw = localStorage.getItem('rocketDrinksConfig');
-      if (raw) window._rkdApplyBarImgs(JSON.parse(raw));
-    } catch(e) {}
-  }
-  function applyFromServer() {
-    fetch('/rocket-config.json?_=' + Date.now(), {cache:'no-store'})
-      .then(function(r){ return r.json(); })
-      .then(function(cfg){
-        try { localStorage.setItem('rocketDrinksConfig', JSON.stringify(cfg)); } catch(e) {}
-        if (typeof window._applyAdminCfg==='function') { window._applyAdminCfg(cfg); }
-        window._rkdApplyBarImgs(cfg);
+  var _lastText = '';
+  var _busy    = false;
+
+  function poll() {
+    if (_busy) return;
+    _busy = true;
+    fetch('/rocket-config.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
       })
-      .catch(function(){});
+      .then(function(text) {
+        _busy = false;
+        if (text === _lastText) return;
+        _lastText = text;
+        try { _rkdApplyAll(JSON.parse(text)); } catch(e) {}
+      })
+      .catch(function() { _busy = false; });
   }
-  function run() { applyFromStorage(); applyFromServer(); }
+
+  function init() {
+    try {
+      var cached = localStorage.getItem('rocketDrinksConfig');
+      if (cached) {
+        _lastText = cached;
+        window._rkdApplyBarImgs(JSON.parse(cached));
+      }
+    } catch(e) {}
+    poll();
+    setInterval(poll, 30000);
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', run);
-  } else { run(); }
-  window.addEventListener('load', run);
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 </script>
 </body>
