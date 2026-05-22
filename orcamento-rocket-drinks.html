@@ -3529,6 +3529,11 @@ function _rkdApplyAll(cfg) {
   var _lastText = '';
   var _busy    = false;
 
+  function _adminJustPublished(){
+    var ts=parseInt(localStorage.getItem('rocketDrinksTS')||'0',10);
+    return(Date.now()-ts)<300000;
+  }
+
   function poll() {
     if (_busy) return;
     _busy = true;
@@ -3541,6 +3546,7 @@ function _rkdApplyAll(cfg) {
         _busy = false;
         if (text === _lastText) return;
         _lastText = text;
+        if(_adminJustPublished())return;
         try { _rkdApplyAll(JSON.parse(text)); } catch(e) {}
       })
       .catch(function() { _busy = false; });
