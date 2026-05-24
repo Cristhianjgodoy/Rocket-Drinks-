@@ -953,27 +953,10 @@ function saveRecovery(){
 // ── LOAD ────────────────────────────────────
 let cfg={}, pendingPhotos={}, pendingSlides={}, pendingAdicSlides={}, defaultPhotos={};
 
-async function loadAll(){
+function loadAll(){
   let stored={};
-  // Tenta carregar rascunho do GitHub se token disponível (sincronização entre dispositivos)
-  const _ghTk=getGhToken();
-  if(_ghTk){
-    try{
-      const _ctrl=new AbortController();const _tid=setTimeout(()=>_ctrl.abort(),6000);
-      const _ghUrl=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/rocket-config-draft.json`;
-      const _ghR=await fetch(_ghUrl,{headers:{'Authorization':'token '+_ghTk,'Accept':'application/vnd.github.v3+json'},cache:'no-store',signal:_ctrl.signal});
-      clearTimeout(_tid);
-      if(_ghR.ok){
-        const _ghD=await _ghR.json();
-        const _ghStr=decodeURIComponent(escape(atob(_ghD.content.replace(/\n/g,''))));
-        stored=JSON.parse(_ghStr);
-        localStorage.setItem(SK,JSON.stringify(stored));
-      }
-    }catch(e){}
-  }
-  if(!stored||Object.keys(stored).length===0){
-    try{stored=JSON.parse(localStorage.getItem(SK))||{};}catch{}
-  }
+  // 1. Carrega do localStorage IMEDIATAMENTE — formulário nunca fica vazio
+  try{stored=JSON.parse(localStorage.getItem(SK))||{};}catch{}
   // Migração única: se SK não tem barSlides/adicSlides (sistema antigo de split-keys),
   // lê das chaves legadas para não perder as fotos customizadas
   if(!stored.barSlides){try{const bs=localStorage.getItem('rocketBarSlides');if(bs)stored.barSlides=JSON.parse(bs);}catch(e){}}
@@ -1049,6 +1032,35 @@ async function loadAll(){
   document.getElementById('rec-wpp').value=cr.recWhatsapp||'';
 
   markClean();
+
+  // 2. Em background: sincroniza com rascunho do GitHub (não bloqueia o formulário)
+  _syncDraftFromGithub();
+}
+
+// Busca rascunho do GitHub em background e atualiza se formulário ainda estiver limpo
+async function _syncDraftFromGithub(){
+  try{
+    const token=getGhToken();
+    if(!token)return;
+    const GH_BASE=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}`;
+    const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),8000);
+    const resp=await fetch(`${GH_BASE}/contents/rocket-config-draft.json`,
+      {headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'},cache:'no-store',signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!resp.ok)return;
+    const data=await resp.json();
+    if(!data.content)return; // arquivo muito grande, ignora
+    const str=decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+    const localStr=localStorage.getItem(SK)||'{}';
+    if(str===localStr)return; // já está sincronizado
+    // Só aplica se o formulário não foi modificado
+    const statusEl=document.getElementById('sstatus');
+    const isClean=statusEl&&statusEl.classList.contains('ok');
+    if(!isClean)return;
+    localStorage.setItem(SK,str);
+    loadAll(); // Recarrega com dados do GitHub
+    toast('📋 Rascunho sincronizado do GitHub','var(--gold)');
+  }catch(e){}
 }
 
 // ── PLAN FEATURES ───────────────────────────
@@ -1910,9 +1922,8 @@ async function save(){
 }
 
 // ── RASCUNHO GITHUB ──────────────────────────
-// Salva o rascunho com imagens em base64 (não processa URLs).
-// Isso garante que o admin sempre veja as fotos corretas ao reabrir,
-// sem depender do CDN. O Publicar é quem converte base64 → URL.
+// Salva apenas texto + URLs já publicadas (sem base64 inline).
+// Base64 fica só no localStorage até o Publicar processar as imagens.
 async function saveDraftToGithub(ov,token){
   const GH_BASE=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}`;
   const ghHdrs={'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
@@ -1922,8 +1933,13 @@ async function saveDraftToGithub(ov,token){
   }
   async function createBlob(b64){return ghAPI('POST',`${GH_BASE}/git/blobs`,{content:b64,encoding:'base64'});}
 
-  // Salva o config como-está (base64 intacto) — sem upload de imagens separado
-  const configStr=JSON.stringify(ov);
+  // Remove base64 do rascunho (arquivo leve, sem dependência de CDN)
+  const slim=JSON.parse(JSON.stringify(ov));
+  if(slim.barSlides)slim.barSlides=slim.barSlides.map(function(s){return s&&s.startsWith('data:')?null:s;});
+  if(slim.adicSlides)slim.adicSlides=slim.adicSlides.map(function(s){return s&&s.startsWith('data:')?null:s;});
+  if(slim.drinks)Object.keys(slim.drinks).forEach(function(id){if(slim.drinks[id]&&slim.drinks[id].foto&&slim.drinks[id].foto.startsWith('data:'))delete slim.drinks[id].foto;});
+
+  const configStr=JSON.stringify(slim);
   const configBase64=btoa(unescape(encodeURIComponent(configStr)));
   const cfgBlob=await createBlob(configBase64);
   const treeEntries=[{path:'rocket-config-draft.json',mode:'100644',type:'blob',sha:cfgBlob.sha}];
@@ -1933,7 +1949,6 @@ async function saveDraftToGithub(ov,token){
   const newTree=await ghAPI('POST',`${GH_BASE}/git/trees`,{base_tree:headCommit.tree.sha,tree:treeEntries});
   const newCommit=await ghAPI('POST',`${GH_BASE}/git/commits`,{message:'Rascunho via admin',tree:newTree.sha,parents:[ref.object.sha]});
   await ghAPI('PATCH',`${GH_BASE}/git/refs/heads/main`,{sha:newCommit.sha,force:true});
-  // localStorage já foi atualizado em save() — não altera aqui
 }
 
 // ── PUBLICAR NO SITE ─────────────────────────
