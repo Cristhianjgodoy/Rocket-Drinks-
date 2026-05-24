@@ -953,9 +953,27 @@ function saveRecovery(){
 // ── LOAD ────────────────────────────────────
 let cfg={}, pendingPhotos={}, pendingSlides={}, pendingAdicSlides={}, defaultPhotos={};
 
-function loadAll(){
+async function loadAll(){
   let stored={};
-  try{stored=JSON.parse(localStorage.getItem(SK))||{};}catch{}
+  // Tenta carregar rascunho do GitHub se token disponível (sincronização entre dispositivos)
+  const _ghTk=getGhToken();
+  if(_ghTk){
+    try{
+      const _ctrl=new AbortController();const _tid=setTimeout(()=>_ctrl.abort(),6000);
+      const _ghUrl=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}/contents/rocket-config-draft.json`;
+      const _ghR=await fetch(_ghUrl,{headers:{'Authorization':'token '+_ghTk,'Accept':'application/vnd.github.v3+json'},cache:'no-store',signal:_ctrl.signal});
+      clearTimeout(_tid);
+      if(_ghR.ok){
+        const _ghD=await _ghR.json();
+        const _ghStr=decodeURIComponent(escape(atob(_ghD.content.replace(/\n/g,''))));
+        stored=JSON.parse(_ghStr);
+        localStorage.setItem(SK,JSON.stringify(stored));
+      }
+    }catch(e){}
+  }
+  if(!stored||Object.keys(stored).length===0){
+    try{stored=JSON.parse(localStorage.getItem(SK))||{};}catch{}
+  }
   // Migração única: se SK não tem barSlides/adicSlides (sistema antigo de split-keys),
   // lê das chaves legadas para não perder as fotos customizadas
   if(!stored.barSlides){try{const bs=localStorage.getItem('rocketBarSlides');if(bs)stored.barSlides=JSON.parse(bs);}catch(e){}}
@@ -1738,7 +1756,7 @@ function markClean(){
 }
 
 // ── SAVE ─────────────────────────────────────
-function save(){
+async function save(){
   const btn=document.getElementById('sbtn');btn.disabled=true;btn.textContent='⏳ Salvando...';
   try{
     // Senha
@@ -1862,16 +1880,87 @@ function save(){
       cfg.equipe=equipeData;
     }
 
+    // 1. Salva localmente (rápido)
     localStorage.setItem(SK,JSON.stringify(ov));
-    // Limpa chaves antigas de split-storage (migração)
     localStorage.removeItem('rocketBarSlides');
     localStorage.removeItem('rocketAdicSlides');
     localStorage.removeItem('rocketDrinkPhotos');
     Object.keys(pendingPhotos).forEach(id=>{if(cfg.drinks[id])cfg.drinks[id].foto=pendingPhotos[id];});
     pendingPhotos={};pendingSlides={};pendingAdicSlides={};
-    markClean();toast('✓ Salvo! Clique em "Publicar no Site" para ir ao ar.','var(--ok)');
+    // Mantém cfg em sincronia para próximos salvamentos
+    cfg.barSlides=ov.barSlides.slice();
+    cfg.barModels=ov.barModels.slice();
+    markClean();
+
+    // 2. Salva rascunho no GitHub (persistente em qualquer dispositivo)
+    const token=getGhToken();
+    if(!token){
+      toast('✓ Salvo! Configure o token para sincronizar entre dispositivos.','var(--gold)');
+    }else{
+      btn.textContent='⏳ Sincronizando...';
+      try{
+        await saveDraftToGithub(JSON.parse(localStorage.getItem(SK)),token);
+        toast('✓ Salvo e sincronizado! Disponível em qualquer dispositivo.','var(--ok)');
+      }catch(e2){
+        toast('✓ Salvo localmente. Erro ao sincronizar: '+e2.message,'var(--gold)');
+      }
+    }
   }catch(e){console.error(e);toast('⚠ Erro: '+e.message,'var(--danger)');}
   btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';
+}
+
+// ── RASCUNHO GITHUB ──────────────────────────
+async function saveDraftToGithub(ov,token){
+  const GH_BASE=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}`;
+  const ghHdrs={'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
+  async function ghAPI(method,url,body){
+    const r=await fetch(url,{method,headers:ghHdrs,body:body?JSON.stringify(body):undefined});
+    const d=await r.json();if(!r.ok)throw new Error(d.message||r.status);return d;
+  }
+  async function createBlob(b64){return ghAPI('POST',`${GH_BASE}/git/blobs`,{content:b64,encoding:'base64'});}
+
+  const ts=Date.now();const treeEntries=[];const blobTasks=[];
+
+  // Faz upload de imagens base64 como arquivos permanentes
+  (ov.barSlides||[]).forEach(function(src,i){
+    if(src&&src.startsWith('data:')){
+      const b64=src.split(',')[1];const p=`images/bar-${i}.jpg`;
+      blobTasks.push(createBlob(b64).then(function(bl){treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});ov.barSlides[i]=`https://rocketdrinks.com.br/${p}?v=${ts}`;}));
+    }
+  });
+  (ov.adicSlides||[]).forEach(function(src,i){
+    if(src&&src.startsWith('data:')){
+      const b64=src.split(',')[1];const p=`images/adicional-${i}.jpg`;
+      blobTasks.push(createBlob(b64).then(function(bl){treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});ov.adicSlides[i]=`https://rocketdrinks.com.br/${p}?v=${ts}`;}));
+    }
+  });
+  if(ov.drinks){Object.keys(ov.drinks).forEach(function(id){
+    if(ov.drinks[id]&&ov.drinks[id].foto&&ov.drinks[id].foto.startsWith('data:')){
+      const b64=ov.drinks[id].foto.split(',')[1];const p=`images/drink-${id}.jpg`;
+      blobTasks.push(createBlob(b64).then(function(bl){treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});ov.drinks[id].foto=`https://rocketdrinks.com.br/${p}?v=${ts}`;}));
+    }
+  });}
+  if(blobTasks.length>0)await Promise.all(blobTasks);
+
+  // Salva rocket-config-draft.json no repositório
+  const configStr=JSON.stringify(ov);
+  const configBase64=btoa(unescape(encodeURIComponent(configStr)));
+  const cfgBlob=await createBlob(configBase64);
+  treeEntries.push({path:'rocket-config-draft.json',mode:'100644',type:'blob',sha:cfgBlob.sha});
+
+  const ref=await ghAPI('GET',`${GH_BASE}/git/ref/heads/main`);
+  const headCommit=await ghAPI('GET',`${GH_BASE}/git/commits/${ref.object.sha}`);
+  const newTree=await ghAPI('POST',`${GH_BASE}/git/trees`,{base_tree:headCommit.tree.sha,tree:treeEntries});
+  const newCommit=await ghAPI('POST',`${GH_BASE}/git/commits`,{message:'Rascunho via admin',tree:newTree.sha,parents:[ref.object.sha]});
+  await ghAPI('PATCH',`${GH_BASE}/git/refs/heads/main`,{sha:newCommit.sha,force:true});
+
+  // Atualiza localStorage e cfg com URLs definitivas (sem base64)
+  localStorage.setItem(SK,configStr);
+  if(typeof cfg!=='undefined'){
+    cfg.barSlides=ov.barSlides.slice();
+    if(ov.adicSlides)cfg.adicSlides=ov.adicSlides.slice();
+    if(ov.drinks)Object.keys(ov.drinks).forEach(id=>{if(cfg.drinks&&cfg.drinks[id]&&ov.drinks[id])cfg.drinks[id].foto=ov.drinks[id].foto;});
+  }
 }
 
 // ── PUBLICAR NO SITE ─────────────────────────
