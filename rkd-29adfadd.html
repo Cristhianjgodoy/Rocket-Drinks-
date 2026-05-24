@@ -1871,6 +1871,7 @@ function save(){
     pendingPhotos={};pendingSlides={};pendingAdicSlides={};
     markClean();toast('✓ Salvo! Clique em "Publicar no Site" para ir ao ar.','var(--ok)');
   }catch(e){console.error(e);toast('⚠ Erro: '+e.message,'var(--danger)');}
+  btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';
 }
 
 // ── PUBLICAR NO SITE ─────────────────────────
