@@ -954,6 +954,8 @@ function saveRecovery(){
 let cfg={}, pendingPhotos={}, pendingSlides={}, pendingAdicSlides={}, defaultPhotos={};
 
 function loadAll(){
+  // Verifica ANTES de carregar se localStorage estava vazio (dispositivo novo)
+  const _wasEmpty=!localStorage.getItem(SK);
   let stored={};
   // 1. Carrega do localStorage IMEDIATAMENTE — formulário nunca fica vazio
   try{stored=JSON.parse(localStorage.getItem(SK))||{};}catch{}
@@ -1033,11 +1035,12 @@ function loadAll(){
 
   markClean();
 
-  // 2. Em background: sincroniza com rascunho do GitHub (não bloqueia o formulário)
-  _syncDraftFromGithub();
+  // Sincroniza do GitHub APENAS em dispositivo novo (localStorage estava vazio).
+  // Em dispositivos com dados salvos, nunca sobrescreve — preserva fotos em base64.
+  if(_wasEmpty) _syncDraftFromGithub();
 }
 
-// Busca rascunho do GitHub em background e atualiza se formulário ainda estiver limpo
+// Busca rascunho do GitHub em background — só chamado quando localStorage está vazio (dispositivo novo)
 async function _syncDraftFromGithub(){
   try{
     const token=getGhToken();
@@ -1049,16 +1052,30 @@ async function _syncDraftFromGithub(){
     clearTimeout(tid);
     if(!resp.ok)return;
     const data=await resp.json();
-    if(!data.content)return; // arquivo muito grande, ignora
+    if(!data.content)return;
     const str=decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
-    const localStr=localStorage.getItem(SK)||'{}';
-    if(str===localStr)return; // já está sincronizado
-    // Só aplica se o formulário não foi modificado
-    const statusEl=document.getElementById('sstatus');
-    const isClean=statusEl&&statusEl.classList.contains('ok');
-    if(!isClean)return;
-    localStorage.setItem(SK,str);
-    loadAll(); // Recarrega com dados do GitHub
+    // Mescla o rascunho com o que está no localStorage (pode ter fotos base64 que o rascunho não tem)
+    let draft={};try{draft=JSON.parse(str);}catch{return;}
+    let local={};try{local=JSON.parse(localStorage.getItem(SK)||'{}');}catch{}
+    // Preserva fotos base64 do local; só usa rascunho para campos de texto/config
+    if(draft.drinks&&local.drinks){
+      Object.keys(local.drinks).forEach(id=>{
+        if(local.drinks[id]&&local.drinks[id].foto&&(!draft.drinks[id]||!draft.drinks[id].foto)){
+          if(!draft.drinks[id])draft.drinks[id]={};
+          draft.drinks[id].foto=local.drinks[id].foto;
+        }
+      });
+    }
+    if(draft.barSlides&&local.barSlides){
+      draft.barSlides=draft.barSlides.map((s,i)=>
+        (s===null&&local.barSlides&&local.barSlides[i])?local.barSlides[i]:s);
+    }else if(!draft.barSlides&&local.barSlides){draft.barSlides=local.barSlides;}
+    if(draft.adicSlides&&local.adicSlides){
+      draft.adicSlides=draft.adicSlides.map((s,i)=>
+        (s===null&&local.adicSlides&&local.adicSlides[i])?local.adicSlides[i]:s);
+    }else if(!draft.adicSlides&&local.adicSlides){draft.adicSlides=local.adicSlides;}
+    localStorage.setItem(SK,JSON.stringify(draft));
+    loadAll();
     toast('📋 Rascunho sincronizado do GitHub','var(--gold)');
   }catch(e){}
 }
