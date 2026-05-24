@@ -1910,6 +1910,9 @@ async function save(){
 }
 
 // ── RASCUNHO GITHUB ──────────────────────────
+// Salva o rascunho com imagens em base64 (não processa URLs).
+// Isso garante que o admin sempre veja as fotos corretas ao reabrir,
+// sem depender do CDN. O Publicar é quem converte base64 → URL.
 async function saveDraftToGithub(ov,token){
   const GH_BASE=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}`;
   const ghHdrs={'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
@@ -1919,48 +1922,18 @@ async function saveDraftToGithub(ov,token){
   }
   async function createBlob(b64){return ghAPI('POST',`${GH_BASE}/git/blobs`,{content:b64,encoding:'base64'});}
 
-  const ts=Date.now();const treeEntries=[];const blobTasks=[];
-
-  // Faz upload de imagens base64 como arquivos permanentes
-  (ov.barSlides||[]).forEach(function(src,i){
-    if(src&&src.startsWith('data:')){
-      const b64=src.split(',')[1];const p=`images/bar-${i}.jpg`;
-      blobTasks.push(createBlob(b64).then(function(bl){treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});ov.barSlides[i]=`https://rocketdrinks.com.br/${p}?v=${ts}`;}));
-    }
-  });
-  (ov.adicSlides||[]).forEach(function(src,i){
-    if(src&&src.startsWith('data:')){
-      const b64=src.split(',')[1];const p=`images/adicional-${i}.jpg`;
-      blobTasks.push(createBlob(b64).then(function(bl){treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});ov.adicSlides[i]=`https://rocketdrinks.com.br/${p}?v=${ts}`;}));
-    }
-  });
-  if(ov.drinks){Object.keys(ov.drinks).forEach(function(id){
-    if(ov.drinks[id]&&ov.drinks[id].foto&&ov.drinks[id].foto.startsWith('data:')){
-      const b64=ov.drinks[id].foto.split(',')[1];const p=`images/drink-${id}.jpg`;
-      blobTasks.push(createBlob(b64).then(function(bl){treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});ov.drinks[id].foto=`https://rocketdrinks.com.br/${p}?v=${ts}`;}));
-    }
-  });}
-  if(blobTasks.length>0)await Promise.all(blobTasks);
-
-  // Salva rocket-config-draft.json no repositório
+  // Salva o config como-está (base64 intacto) — sem upload de imagens separado
   const configStr=JSON.stringify(ov);
   const configBase64=btoa(unescape(encodeURIComponent(configStr)));
   const cfgBlob=await createBlob(configBase64);
-  treeEntries.push({path:'rocket-config-draft.json',mode:'100644',type:'blob',sha:cfgBlob.sha});
+  const treeEntries=[{path:'rocket-config-draft.json',mode:'100644',type:'blob',sha:cfgBlob.sha}];
 
   const ref=await ghAPI('GET',`${GH_BASE}/git/ref/heads/main`);
   const headCommit=await ghAPI('GET',`${GH_BASE}/git/commits/${ref.object.sha}`);
   const newTree=await ghAPI('POST',`${GH_BASE}/git/trees`,{base_tree:headCommit.tree.sha,tree:treeEntries});
   const newCommit=await ghAPI('POST',`${GH_BASE}/git/commits`,{message:'Rascunho via admin',tree:newTree.sha,parents:[ref.object.sha]});
   await ghAPI('PATCH',`${GH_BASE}/git/refs/heads/main`,{sha:newCommit.sha,force:true});
-
-  // Atualiza localStorage e cfg com URLs definitivas (sem base64)
-  localStorage.setItem(SK,configStr);
-  if(typeof cfg!=='undefined'){
-    cfg.barSlides=ov.barSlides.slice();
-    if(ov.adicSlides)cfg.adicSlides=ov.adicSlides.slice();
-    if(ov.drinks)Object.keys(ov.drinks).forEach(id=>{if(cfg.drinks&&cfg.drinks[id]&&ov.drinks[id])cfg.drinks[id].foto=ov.drinks[id].foto;});
-  }
+  // localStorage já foi atualizado em save() — não altera aqui
 }
 
 // ── PUBLICAR NO SITE ─────────────────────────
