@@ -1984,6 +1984,7 @@ async function doPublicar(){
     localStorage.setItem('rocketDrinkPhotos',JSON.stringify(pubPhotos));
     delete ovSlimPub.barSlides;delete ovSlimPub.adicSlides;
     localStorage.setItem(SK,JSON.stringify(ovSlimPub));
+    localStorage.setItem('rocketDrinksTS', Date.now().toString());
 
     const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) enviada(s). Aguarde ~1 min.`:'✅ Configuração publicada! Aguarde ~1 min.';
     toast(msg,'var(--ok)');
