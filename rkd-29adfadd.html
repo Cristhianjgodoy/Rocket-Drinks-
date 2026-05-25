@@ -2059,13 +2059,14 @@ async function doPublicar(){
     const newCommit=await ghAPI('POST',`${GH_BASE}/git/commits`,{message:'Config e fotos via admin',tree:newTree.sha,parents:[ref.object.sha]});
     await ghAPI('PATCH',`${GH_BASE}/git/refs/heads/main`,{sha:newCommit.sha,force:true});
 
-    // 4. Atualiza localStorage — fonte única de verdade
+    // 4. Atualiza localStorage e sincroniza cfg em memória (evita re-upload na próxima edição)
     localStorage.setItem(SK,configStr);
-    // Garante que chaves antigas de split-storage não causem confusão
     localStorage.removeItem('rocketBarSlides');
     localStorage.removeItem('rocketAdicSlides');
     localStorage.removeItem('rocketDrinkPhotos');
     localStorage.setItem('rocketDrinksTS', Date.now().toString());
+    // Sincroniza cfg em memória com as URLs CDN publicadas
+    try{cfg=JSON.parse(configStr);}catch(e){}
 
     const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) no ar em ~30s.`:'✅ Publicado! Site atualiza em ~30s.';
     toast(msg,'var(--ok)');
