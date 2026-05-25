@@ -1757,8 +1757,9 @@ function markClean(){
 }
 
 // ── SAVE ─────────────────────────────────────
-async function save(){
-  const btn=document.getElementById('sbtn');btn.disabled=true;btn.textContent='⏳ Salvando...';
+// silentLocal=true: salva só no localStorage (sem draft no GitHub, sem toast) — usado pelo fluxo de publicar
+async function save(silentLocal){
+  const btn=document.getElementById('sbtn');if(!silentLocal){btn.disabled=true;btn.textContent='⏳ Salvando...';}
   try{
     // Senha
     const np=document.getElementById('new-pass').value;
@@ -1893,6 +1894,9 @@ async function save(){
     cfg.barModels=ov.barModels.slice();
     markClean();
 
+    // Modo silencioso: só salva localmente (chamado pelo fluxo de publicar)
+    if(silentLocal){if(!btn.disabled)btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';return;}
+
     // 2. Salva rascunho no GitHub (persistente em qualquer dispositivo)
     const token=getGhToken();
     if(!token){
@@ -1907,7 +1911,7 @@ async function save(){
       }
     }
   }catch(e){console.error(e);toast('⚠ Erro: '+e.message,'var(--danger)');}
-  btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';
+  if(!silentLocal){btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';}
 }
 
 // ── RASCUNHO GITHUB ──────────────────────────
@@ -1970,10 +1974,15 @@ function saveGhToken(){
 }
 
 async function publicarNoSite(){
-  const stored=localStorage.getItem(SK);
-  if(!stored){toast('⚠ Salve primeiro antes de publicar!','var(--danger)');return;}
   const token=getGhToken();
   if(!token){openGhTokenModal();return;}
+  // Auto-salva localmente se houver alterações não salvas
+  const statusEl=document.getElementById('sstatus');
+  if(statusEl&&statusEl.classList.contains('dirty')){
+    await save(true); // salva localStorage sem draft sync
+  }
+  const stored=localStorage.getItem(SK);
+  if(!stored){toast('⚠ Salve primeiro antes de publicar!','var(--danger)');return;}
   doPublicar();
 }
 
