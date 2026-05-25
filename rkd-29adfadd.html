@@ -1010,6 +1010,42 @@ function loadAll(){
   // Sincroniza do GitHub APENAS em dispositivo novo (localStorage estava vazio).
   // Em dispositivos com dados salvos, nunca sobrescreve — preserva fotos em base64.
   if(_wasEmpty) _syncDraftFromGithub();
+  else _syncExtraSlidesFromPublished(); // restaura slides extras do site publicado silenciosamente
+}
+
+// Ao iniciar, verifica se o site publicado tem mais slides do que o admin local.
+// Se sim, restaura os slides extras do site para evitar perda acidental ao publicar.
+async function _syncExtraSlidesFromPublished(){
+  try{
+    const r=await fetch('/rocket-config.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)return;
+    const pub=await r.json();
+    const liveBars=pub.barSlides||[];
+    const liveAdics=pub.adicSlides||[];
+    let changed=false;
+    // Adiciona slides que estão no site mas não no admin local
+    while(cfg.barSlides.length<liveBars.length){
+      const idx=cfg.barSlides.length;
+      if(liveBars[idx]&&!liveBars[idx].startsWith('data:')){cfg.barSlides.push(liveBars[idx]);changed=true;}
+      else break;
+    }
+    while(cfg.adicSlides.length<liveAdics.length){
+      const idx=cfg.adicSlides.length;
+      if(liveAdics[idx]&&!liveAdics[idx].startsWith('data:')){cfg.adicSlides.push(liveAdics[idx]);changed=true;}
+      else break;
+    }
+    if(changed){
+      // Salva restauração no localStorage (sem base64, não causa quota)
+      try{
+        const stored=JSON.parse(localStorage.getItem(SK)||'{}');
+        stored.barSlides=cfg.barSlides.map(s=>(s&&s.startsWith('data:'))?null:s);
+        stored.adicSlides=cfg.adicSlides.map(s=>(s&&s.startsWith('data:'))?null:s);
+        localStorage.setItem(SK,JSON.stringify(stored));
+      }catch(e){}
+      renderSlides();renderAdicSlides();
+      // Não marca dirty — restauração é transparente para o usuário
+    }
+  }catch(e){}
 }
 
 // Busca rascunho do GitHub em background — só chamado quando localStorage está vazio (dispositivo novo)
