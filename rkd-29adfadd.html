@@ -155,8 +155,10 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .sbtn{padding:12px 24px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold-l));color:#000;font-size:13px;font-weight:700;border:none;cursor:pointer;}
 .sbtn:disabled{opacity:.5;cursor:not-allowed;}
 /* Toast */
-.toast{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-14px);background:var(--card);border:1px solid var(--bdg);border-radius:10px;padding:10px 18px;font-size:13px;opacity:0;transition:all .3s;pointer-events:none;z-index:200;white-space:nowrap;}
+.toast{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-14px);background:var(--card);border:1px solid var(--bdg);border-radius:10px;padding:10px 18px;font-size:13px;opacity:0;transition:all .3s;pointer-events:none;z-index:200;white-space:normal;max-width:88vw;text-align:center;line-height:1.4;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* Pub-result bar */
+.pub-result{position:fixed;bottom:57px;left:0;right:0;text-align:center;padding:5px 16px;font-size:12px;font-weight:600;display:none;z-index:49;letter-spacing:.3px;}
 .pb{height:80px;display:block;}
 .tag{display:inline-block;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-left:5px;}
 /* Equipe */
@@ -570,6 +572,7 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
   <span class="pb"></span>
 </div>
 
+<div class="pub-result" id="pub-result"></div>
 <div class="sbar" id="sbar" style="display:none;">
   <div class="sstatus dirty" id="sstatus">● Alterações não salvas</div>
   <button class="sbtn" id="sbtn" onclick="save()">💾 Salvar Alterações</button>
@@ -1981,6 +1984,7 @@ async function doPublicar(){
   if(!token){openGhTokenModal();return;}
   const pb=document.getElementById('pbtn');
   pb.disabled=true;pb.textContent='⏳ Verificando token...';
+  hidePubResult();
   try{
     // 1. Verificar token
     const verResp=await fetch(`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}`,
@@ -1989,7 +1993,18 @@ async function doPublicar(){
       localStorage.removeItem(GH_TOKEN_KEY);
       if(pb){pb.disabled=false;pb.textContent='🚀 Publicar no Site';}
       openGhTokenModal();
-      toast('⚠ Token inválido ou expirado. Configure um novo token abaixo.','var(--danger)');
+      toast('⚠ Token inválido ou expirado. Configure um novo token abaixo.','var(--danger)',7000);
+      showPubResult('❌ Token inválido ou expirado — configure um novo token.','var(--danger)');
+      return;
+    }
+    // Verificar escopos (só válido para tokens clássicos)
+    const scopes=verResp.headers.get('x-oauth-scopes')||'';
+    if(scopes&&!scopes.includes('repo')&&!scopes.includes('public_repo')){
+      localStorage.removeItem(GH_TOKEN_KEY);
+      if(pb){pb.disabled=false;pb.textContent='🚀 Publicar no Site';}
+      openGhTokenModal();
+      toast('⚠ Token sem permissão de escrita. Crie um token clássico com escopo "repo".','var(--danger)',9000);
+      showPubResult('❌ Token sem permissão de escrita — use token clássico com escopo "repo".','var(--danger)');
       return;
     }
 
@@ -2051,15 +2066,19 @@ async function doPublicar(){
     }
 
     // 3. Blob do rocket-config.json + um único commit com tudo
-    pb.textContent='⏳ Publicando configuração...';
+    pb.textContent='⏳ Criando blob config...';
     const configStr=JSON.stringify(ov);
     const configBase64=btoa(unescape(encodeURIComponent(configStr)));
     const cfgBlob=await createBlob(configBase64);
     treeEntries.push({path:'rocket-config.json',mode:'100644',type:'blob',sha:cfgBlob.sha});
+    pb.textContent='⏳ Lendo ref do repositório...';
     const ref=await ghAPI('GET',`${GH_BASE}/git/ref/heads/main`);
     const headCommit=await ghAPI('GET',`${GH_BASE}/git/commits/${ref.object.sha}`);
+    pb.textContent='⏳ Criando árvore de arquivos...';
     const newTree=await ghAPI('POST',`${GH_BASE}/git/trees`,{base_tree:headCommit.tree.sha,tree:treeEntries});
+    pb.textContent='⏳ Criando commit...';
     const newCommit=await ghAPI('POST',`${GH_BASE}/git/commits`,{message:'Config e fotos via admin',tree:newTree.sha,parents:[ref.object.sha]});
+    pb.textContent='⏳ Atualizando branch main...';
     await ghAPI('PATCH',`${GH_BASE}/git/refs/heads/main`,{sha:newCommit.sha,force:true});
 
     // 4. Atualiza localStorage e sincroniza cfg em memória (evita re-upload na próxima edição)
@@ -2072,10 +2091,24 @@ async function doPublicar(){
     try{cfg=JSON.parse(configStr);}catch(e){}
 
     const msg=imgCount>0?`✅ Publicado! ${imgCount} foto(s) no ar em ~30s.`:'✅ Publicado! Site atualiza em ~30s.';
-    toast(msg,'var(--ok)');
+    toast(msg,'var(--ok)',4000);
+    showPubResult('✅ '+(imgCount>0?`Publicado com sucesso — ${imgCount} foto(s) enviada(s). Site atualiza em até 30s.`:'Publicado com sucesso! Site atualiza em até 30s.'),'var(--ok)');
   }catch(e){
-    console.error('doPublicar error:',e);
-    toast('⚠ '+e.message,'var(--danger)');
+    // Traduz erros comuns da API do GitHub para português
+    let rawMsg=e.message||'Erro desconhecido';
+    let friendlyMsg=rawMsg;
+    if(rawMsg.includes('Bad credentials')||rawMsg==='401')
+      friendlyMsg='Token inválido (Bad credentials). Clique em "Publicar" e atualize o token.';
+    else if(rawMsg.includes('not accessible')||rawMsg.includes('Resource not accessible')||rawMsg==='403')
+      friendlyMsg='Sem permissão de escrita. Use um token clássico (não fine-grained) com escopo "repo".';
+    else if(rawMsg.includes('rate limit')||rawMsg==='429')
+      friendlyMsg='Limite de requisições GitHub atingido. Aguarde alguns minutos.';
+    else if(rawMsg==='Not Found'||rawMsg.includes('404'))
+      friendlyMsg='Repositório não encontrado. Verifique o nome do repositório nas configurações.';
+    else if(rawMsg.includes('Network')||rawMsg.includes('fetch'))
+      friendlyMsg='Sem conexão com internet. Verifique e tente novamente.';
+    toast('⚠ '+friendlyMsg,'var(--danger)',9000);
+    showPubResult('❌ Publicação falhou: '+friendlyMsg,'var(--danger)');
   }
   if(pb){pb.disabled=false;pb.textContent='🚀 Publicar no Site';}
 }
@@ -2279,11 +2312,25 @@ function _buildAdicEmojiPanel(panel,i){
 }
 
 // ── TOAST ────────────────────────────────────
-function toast(msg,color){
+function toast(msg,color,dur){
   const t=document.getElementById('toast');
   t.textContent=msg;t.style.borderColor=color||'var(--bdg)';
-  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);
+  t.classList.remove('show');
+  void t.offsetWidth; // força reflow para reiniciar animação
+  t.classList.add('show');
+  if(t._toastTimer)clearTimeout(t._toastTimer);
+  t._toastTimer=setTimeout(()=>t.classList.remove('show'),dur||2800);
 }
+function showPubResult(msg,color){
+  const el=document.getElementById('pub-result');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.background=(color==='var(--ok)')?'rgba(46,204,113,.18)':(color==='var(--danger)')?'rgba(231,76,60,.18)':'rgba(201,168,76,.12)';
+  el.style.color=color==='var(--ok)'?'var(--ok)':color==='var(--danger)'?'var(--danger)':'var(--gold)';
+  el.style.borderTop=`1px solid ${color==='var(--ok)'?'rgba(46,204,113,.3)':color==='var(--danger)'?'rgba(231,76,60,.3)':'rgba(201,168,76,.2)'}`;
+  el.style.display='block';
+}
+function hidePubResult(){const el=document.getElementById('pub-result');if(el)el.style.display='none';}
 
 // ── UTILS ────────────────────────────────────
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
