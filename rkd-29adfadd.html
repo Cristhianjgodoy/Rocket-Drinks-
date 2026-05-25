@@ -1987,7 +1987,10 @@ async function doPublicar(){
       {headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
     if(!verResp.ok){
       localStorage.removeItem(GH_TOKEN_KEY);
-      throw new Error('Token inválido. Clique em Publicar novamente para configurar o token.');
+      if(pb){pb.disabled=false;pb.textContent='🚀 Publicar no Site';}
+      openGhTokenModal();
+      toast('⚠ Token inválido ou expirado. Configure um novo token abaixo.','var(--danger)');
+      return;
     }
 
     const ov=JSON.parse(stored);
