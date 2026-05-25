@@ -1310,6 +1310,16 @@ function handleDrinkPhoto(inp,id){
 }
 
 // ── BAR SLIDES ───────────────────────────────
+// Retry de imagem para previews do admin (GitHub Pages pode demorar 30-60s para servir arquivo novo)
+function _adminImgRetry(img,src){
+  var tries=0;
+  img.onerror=function(){
+    if(tries<24){tries++;img.style.opacity='0.3';
+      setTimeout(function(){img.src=src+(src.indexOf('?')>=0?'&':'?')+'_r'+tries+'='+Date.now();},5000);}
+  };
+  img.onload=function(){img.style.opacity='';};
+}
+
 function renderSlides(){
   const grid=document.getElementById('slides-grid');grid.innerHTML='';
   cfg.barSlides.forEach((src,i)=>{
@@ -1328,6 +1338,7 @@ function renderSlides(){
       ${src?`<button class="slide-crop-btn" onclick="event.stopPropagation();openCropModal('bar',${i})">✂️ Enquadrar</button>`:''}
       ${src?`<button class="slide-restore-btn" onclick="event.stopPropagation();restoreBarSlide(${i})" title="${defSrc?'Restaurar foto original':'Remover foto'}">↩ Restaurar</button>`:''}
       <div class="slide-lbl">${src?'Clique para trocar':'Clique para adicionar'}</div>`;
+    if(src&&!src.startsWith('data:')){const im=cell.querySelector('#simg-'+i);if(im)_adminImgRetry(im,src);}
     grid.appendChild(cell);
   });
 }
@@ -2207,11 +2218,12 @@ function renderAdicSlides(){
       '<span class="slide-num">'+(i+1)+'</span>'+
       '<button class="slide-del" onclick="event.stopPropagation();removeAdicSlide('+i+')" title="Remover foto">✕</button>'+
       '<span class="slide-drag-handle" title="Arraste para reordenar">☰</span>'+
-      (src?'<img src="'+src+'" id="adic-simg-'+i+'">'
+      (src?'<img src="'+src+'" id="adic-simg-'+i+'" style="">'
           :'<div class="slide-cell-ph" id="adic-simg-'+i+'">🎁</div>')+
       ((src||defSrc)?'<button class="slide-crop-btn" onclick="event.stopPropagation();openAdicCropModal('+i+')">✂️ Enquadrar</button>':'')+
       (src?'<button class="slide-restore-btn" onclick="event.stopPropagation();restoreAdicSlide('+i+')" title="'+(defSrc?'Restaurar foto original':'Remover foto')+'">↩ Restaurar</button>':'')+
       '<div class="slide-lbl">'+(src?'Clique para trocar':'Clique para adicionar')+'</div>';
+    if(src&&!src.startsWith('data:')){var im2=cell.querySelector('#adic-simg-'+i);if(im2)_adminImgRetry(im2,src);}
     grid.appendChild(cell);
   });
 }
