@@ -148,7 +148,8 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 /* Bar model cards */
 .bar-model-card{background:var(--card2);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:10px;}
 /* Save bar */
-.sbar{background:var(--card);border-top:1px solid var(--bdg);padding:12px 18px;position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;z-index:50;}
+.sbar{background:var(--card);border-top:1px solid var(--bdg);position:fixed;bottom:0;left:0;right:0;display:none;flex-direction:column;z-index:50;}
+.sbar-row{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;}
 .sstatus{font-size:12px;color:var(--mu);}
 .sstatus.ok{color:var(--ok);}
 .sstatus.dirty{color:var(--gold);}
@@ -157,8 +158,8 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 /* Toast */
 .toast{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-14px);background:var(--card);border:1px solid var(--bdg);border-radius:10px;padding:10px 18px;font-size:13px;opacity:0;transition:all .3s;pointer-events:none;z-index:200;white-space:normal;max-width:88vw;text-align:center;line-height:1.4;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-/* Pub-result bar */
-.pub-result{position:fixed;bottom:57px;left:0;right:0;text-align:center;padding:5px 16px;font-size:12px;font-weight:600;display:none;z-index:49;letter-spacing:.3px;}
+/* Pub-result bar — fica dentro da sbar, acima dos botões */
+.pub-result{width:100%;text-align:center;padding:6px 16px;font-size:12px;font-weight:600;display:none;letter-spacing:.3px;border-bottom:1px solid transparent;}
 .pb{height:80px;display:block;}
 .tag{display:inline-block;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-left:5px;}
 /* Equipe */
@@ -572,11 +573,15 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
   <span class="pb"></span>
 </div>
 
-<div class="pub-result" id="pub-result"></div>
-<div class="sbar" id="sbar" style="display:none;">
-  <div class="sstatus dirty" id="sstatus">● Alterações não salvas</div>
-  <button class="sbtn" id="sbtn" onclick="save()">💾 Salvar Alterações</button>
-  <button class="sbtn" id="pbtn" onclick="publicarNoSite()" style="background:var(--card);border:1px solid var(--gold);color:var(--gold);margin-left:8px;">🚀 Publicar no Site</button>
+<div class="sbar" id="sbar">
+  <div class="pub-result" id="pub-result"></div>
+  <div class="sbar-row">
+    <div class="sstatus dirty" id="sstatus">● Alterações não salvas</div>
+    <div>
+      <button class="sbtn" id="sbtn" onclick="save()">💾 Salvar Alterações</button>
+      <button class="sbtn" id="pbtn" onclick="publicarNoSite()" style="background:var(--card);border:1px solid var(--gold);color:var(--gold);margin-left:8px;">🚀 Publicar no Site</button>
+    </div>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -2402,7 +2407,8 @@ function showPubResult(msg,color){
   el.textContent=msg;
   el.style.background=(color==='var(--ok)')?'rgba(46,204,113,.18)':(color==='var(--danger)')?'rgba(231,76,60,.18)':'rgba(201,168,76,.12)';
   el.style.color=color==='var(--ok)'?'var(--ok)':color==='var(--danger)'?'var(--danger)':'var(--gold)';
-  el.style.borderTop=`1px solid ${color==='var(--ok)'?'rgba(46,204,113,.3)':color==='var(--danger)'?'rgba(231,76,60,.3)':'rgba(201,168,76,.2)'}`;
+  el.style.borderBottom=`1px solid ${color==='var(--ok)'?'rgba(46,204,113,.3)':color==='var(--danger)'?'rgba(231,76,60,.3)':'rgba(201,168,76,.2)'}`;
+  el.style.borderTop='none';
   el.style.display='block';
 }
 function hidePubResult(){const el=document.getElementById('pub-result');if(el)el.style.display='none';}
