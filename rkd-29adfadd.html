@@ -1883,14 +1883,30 @@ async function save(silentLocal){
     }
 
     // 1. Salva localmente (rápido)
-    localStorage.setItem(SK,JSON.stringify(ov));
+    // IMPORTANTE: salva versão SEM base64 no localStorage (evita quota exceeded ~5MB)
+    // Base64 fica apenas em memória (cfg) até o momento do publish
+    const ovStorage=JSON.parse(JSON.stringify(ov));
+    if(ovStorage.barSlides) ovStorage.barSlides=ovStorage.barSlides.map(s=>(s&&s.startsWith('data:'))?null:s);
+    if(ovStorage.adicSlides) ovStorage.adicSlides=ovStorage.adicSlides.map(s=>(s&&s.startsWith('data:'))?null:s);
+    if(ovStorage.drinks) Object.keys(ovStorage.drinks).forEach(function(id){
+      if(ovStorage.drinks[id]&&ovStorage.drinks[id].foto&&ovStorage.drinks[id].foto.startsWith('data:'))
+        ovStorage.drinks[id].foto=null;
+    });
+    try{
+      localStorage.setItem(SK,JSON.stringify(ovStorage));
+    }catch(qe){
+      toast('⚠ Erro ao salvar: armazenamento cheio. Publique e tente novamente.','var(--danger)',8000);
+      if(!silentLocal){btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';}
+      return;
+    }
     localStorage.removeItem('rocketBarSlides');
     localStorage.removeItem('rocketAdicSlides');
     localStorage.removeItem('rocketDrinkPhotos');
     Object.keys(pendingPhotos).forEach(id=>{if(cfg.drinks[id])cfg.drinks[id].foto=pendingPhotos[id];});
     pendingPhotos={};pendingSlides={};pendingAdicSlides={};
-    // Mantém cfg em sincronia para próximos salvamentos
+    // Mantém cfg em memória com base64 intacto (para publish usar)
     cfg.barSlides=ov.barSlides.slice();
+    cfg.adicSlides=ov.adicSlides.slice();
     cfg.barModels=ov.barModels.slice();
     markClean();
 
@@ -2018,6 +2034,18 @@ async function doPublicar(){
     }
 
     const ov=JSON.parse(stored);
+    // Restaura base64 do cfg em memória (localStorage tem null para imagens não publicadas)
+    // cfg.barSlides e cfg.adicSlides mantêm base64 intacto até o publish
+    if(cfg.barSlides) ov.barSlides=(ov.barSlides||[]).map(function(s,i){
+      return (!s&&cfg.barSlides[i]&&cfg.barSlides[i].startsWith('data:'))?cfg.barSlides[i]:s;
+    });
+    if(cfg.adicSlides) ov.adicSlides=(ov.adicSlides||[]).map(function(s,i){
+      return (!s&&cfg.adicSlides[i]&&cfg.adicSlides[i].startsWith('data:'))?cfg.adicSlides[i]:s;
+    });
+    if(cfg.drinks&&ov.drinks) Object.keys(ov.drinks).forEach(function(id){
+      if(!ov.drinks[id].foto&&cfg.drinks[id]&&cfg.drinks[id].foto&&cfg.drinks[id].foto.startsWith('data:'))
+        ov.drinks[id].foto=cfg.drinks[id].foto;
+    });
 
     // Git Data API — sem conflito de SHA (método confiável)
     const GH_BASE=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}`;
@@ -2039,31 +2067,33 @@ async function doPublicar(){
     const ts=Date.now();
     pb.textContent='⏳ Preparando fotos...';
 
+    // Nota: o timestamp é incluído no NOME do arquivo (images/bar-0-TS.jpg)
+    // Isso garante que cada publish cria um path novo no CDN — sem stale cache
     (ov.barSlides||[]).forEach(function(src,i){
       if(src&&src.startsWith('data:')){
-        const b64=src.split(',')[1];const p=`images/bar-${i}.jpg`;
+        const b64=src.split(',')[1];const p=`images/bar-${i}-${ts}.jpg`;
         blobTasks.push(createBlob(b64).then(function(bl){
           treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});
-          ov.barSlides[i]=`https://rocketdrinks.com.br/${p}?v=${ts}`;imgCount++;
+          ov.barSlides[i]=`https://rocketdrinks.com.br/${p}`;imgCount++;
         }));
       }
     });
     (ov.adicSlides||[]).forEach(function(src,i){
       if(src&&src.startsWith('data:')){
-        const b64=src.split(',')[1];const p=`images/adicional-${i}.jpg`;
+        const b64=src.split(',')[1];const p=`images/adicional-${i}-${ts}.jpg`;
         blobTasks.push(createBlob(b64).then(function(bl){
           treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});
-          ov.adicSlides[i]=`https://rocketdrinks.com.br/${p}?v=${ts}`;imgCount++;
+          ov.adicSlides[i]=`https://rocketdrinks.com.br/${p}`;imgCount++;
         }));
       }
     });
     if(ov.drinks){
       Object.keys(ov.drinks).forEach(function(id){
         if(ov.drinks[id]&&ov.drinks[id].foto&&ov.drinks[id].foto.startsWith('data:')){
-          const b64=ov.drinks[id].foto.split(',')[1];const p=`images/drink-${id}.jpg`;
+          const b64=ov.drinks[id].foto.split(',')[1];const p=`images/drink-${id}-${ts}.jpg`;
           blobTasks.push(createBlob(b64).then(function(bl){
             treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});
-            ov.drinks[id].foto=`https://rocketdrinks.com.br/${p}?v=${ts}`;imgCount++;
+            ov.drinks[id].foto=`https://rocketdrinks.com.br/${p}`;imgCount++;
           }));
         }
       });
