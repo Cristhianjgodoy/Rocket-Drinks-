@@ -2105,7 +2105,12 @@ window._applyAdminCfg = function(cfgOverride) {
 
     // ── Empresa ──
     if (ov.empresa)  CONFIG.empresa  = ov.empresa;
-    if (ov.fundador) CONFIG.fundador = ov.fundador;
+    if (ov.fundador) {
+      CONFIG.fundador = ov.fundador;
+      // Atualiza DOM imediatamente (nome do fundador no step 1)
+      var _fEl = document.getElementById('founder-name-display');
+      if (_fEl) _fEl.textContent = ov.fundador;
+    }
     if (ov.whatsapp) CONFIG.whatsapp = ov.whatsapp;
     if (ov.leadsScriptUrl) CONFIG.leadsScriptUrl = ov.leadsScriptUrl;
 
@@ -3579,7 +3584,7 @@ function _rkdApplyAll(cfg) {
       }
     } catch(e) {}
     poll();
-    setInterval(poll, 30000);
+    setInterval(poll, 10000); // verifica a cada 10s (era 30s)
   }
 
   if (document.readyState === 'loading') {
