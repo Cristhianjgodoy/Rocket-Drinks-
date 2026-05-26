@@ -2199,6 +2199,10 @@ window._applyAdminCfg = function(cfgOverride) {
     if (ov.adicItems && Array.isArray(ov.adicItems)) {
       CONFIG.adicionais.items = ov.adicItems;
     }
+    // Re-renderiza a lista de adicionais se já estiver visível (step 7 com "Sim" selecionado)
+    if (typeof state !== 'undefined' && state.adicionaisInteresse === 'sim') {
+      try { if (typeof buildAdicionais === 'function') buildAdicionais(); } catch(e) {}
+    }
 
     // ── Equipe por faixa ──
     if (ov.equipe && Array.isArray(ov.equipe) && ov.equipe.length > 0) {
