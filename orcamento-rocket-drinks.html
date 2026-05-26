@@ -2087,16 +2087,7 @@ const CONFIG = {
   },
 };
 
-// Freeze config to prevent tampering
-Object.freeze(CONFIG);
-try{
-  ['planos','drinks_simples','drinks_premium','adicItems','barModels'].forEach(k=>{
-    if(CONFIG[k]){
-      if(Array.isArray(CONFIG[k])){CONFIG[k].forEach(i=>Object.freeze(i));}
-      else{Object.keys(CONFIG[k]).forEach(p=>{Object.freeze(CONFIG[k][p]);if(CONFIG[k][p]&&CONFIG[k][p].faixas)CONFIG[k][p].faixas.forEach(f=>Object.freeze(f));});}
-    }
-  });
-}catch{}
+// Nota: Object.freeze removido — impedia _applyAdminCfg de atualizar planos, drinks e equipe
 
 // Acesso ao admin: tratado no primeiro script (anti-devtools)
 
@@ -2162,19 +2153,28 @@ window._applyAdminCfg = function(cfgOverride) {
     // ── Bar slides + Adicionais slides ──
     // Aplicado separadamente por _rkdApplyBarImgs após este bloco
 
-    // ── Bar models (modelos de bar) ──
-    if (ov.barModels) {
-      const items = document.querySelectorAll('#bar-options .drink-item');
-      ov.barModels.forEach((m, i) => {
-        if (!items[i]) return;
-        const nameEl  = items[i].querySelector('.drink-name');
-        const descEl  = items[i].querySelector('.drink-desc');
-        const emojiEl = items[i].querySelector('[style*="font-size:24px"]');
-        if (nameEl  && m.nome)  nameEl.textContent  = m.nome;
-        if (descEl  && m.desc)  descEl.textContent  = m.desc;
-        if (emojiEl && m.emoji) emojiEl.textContent = m.emoji;
-        if (m.nome) items[i].setAttribute('onclick', `selectBarStructure(this,'${m.nome.replace(/'/g,"\'")}')` );
-      });
+    // ── Bar models (modelos de bar) — reconstrói todos os itens ──
+    if (ov.barModels && ov.barModels.length > 0) {
+      const barOpts = document.getElementById('bar-options');
+      if (barOpts) {
+        // Remove apenas os drink-items (mantém divider e label)
+        barOpts.querySelectorAll('.drink-item').forEach(el => el.remove());
+        ov.barModels.forEach((m, i) => {
+          const div = document.createElement('div');
+          div.className = 'drink-item';
+          if (i < ov.barModels.length - 1) div.style.marginBottom = '8px';
+          const safeName = (m.nome || '').replace(/'/g, "\\'");
+          div.setAttribute('onclick', `selectBarStructure(this,'${safeName}')`);
+          div.innerHTML =
+            `<div style="font-size:24px;">${m.emoji || '🍹'}</div>` +
+            `<div class="drink-text">` +
+              `<div class="drink-name">${m.nome || ''}</div>` +
+              `<div class="drink-desc">${m.desc || ''}</div>` +
+            `</div>` +
+            `<div class="drink-check">✓</div>`;
+          barOpts.appendChild(div);
+        });
+      }
     }
 
     // ── Bar aviso ──
@@ -2277,19 +2277,14 @@ function goTo(n) {
   if (n === 4) {
     buildDrinks();
     refreshDrinkItems();
-    // Badge do plano selecionado
-    const planInfo = {
-      bronze:  { emoji:'🍹', nome:'Plano Caipirinhas', desc:'Uma opção prática e acessível.' },
-      silver:  { emoji:'🚀', nome:'Plano Rocket',      desc:'Completo, variado e equilibrado.' },
-      gold:    { emoji:'🥇', nome:'Plano Premium',      desc:'Exclusividade premium para impressionar seus convidados.' },
-      diamond: { emoji:'💎', nome:'Plano Diamond',     desc:'A experiência mais completa e exclusiva.' },
-    };
+    // Badge do plano selecionado — usa CONFIG (já atualizado pelo admin)
+    const _planEmoji = { bronze:'🍹', silver:'🚀', gold:'🥇', diamond:'💎' };
     const pb = document.getElementById('plano-badge-s4');
-    if (state.plan && planInfo[state.plan]) {
-      const p = planInfo[state.plan];
-      document.getElementById('plano-badge-emoji').textContent = p.emoji;
-      document.getElementById('plano-badge-nome').textContent  = p.nome;
-      document.getElementById('plano-badge-desc').textContent  = p.desc;
+    if (state.plan && CONFIG.planos[state.plan]) {
+      const p = CONFIG.planos[state.plan];
+      document.getElementById('plano-badge-emoji').textContent = _planEmoji[state.plan] || '🍹';
+      document.getElementById('plano-badge-nome').textContent  = p.nome || state.plan;
+      document.getElementById('plano-badge-desc').textContent  = p.desc || '';
       pb.style.display = 'flex';
     } else {
       pb.style.display = 'none';
@@ -2544,7 +2539,7 @@ function abrirWhatsAppCustom() {
   const eventoTexto = evento ? `um(a) *${evento}*` : 'um evento especial';
 
   const msg = `Olá! ${nomeTexto} organizando ${eventoTexto} com mais de 500 convidados.\n\nGostaria de solicitar um orçamento personalizado da Rocket Drinks para o meu evento. 🥂\n\nPodem me ajudar?`;
-  window.open('https://wa.me/5551996753692?text=' + encodeURIComponent(msg), '_blank');
+  window.open('https://wa.me/' + CONFIG.whatsapp + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
 function atualizarMsgCustom() {
@@ -2659,7 +2654,7 @@ function togglePlan(name) {
 function selectPlan(name, e) {
   e.stopPropagation();
   state.plan = name;
-  state.planLabel = { bronze:'Caipirinhas 🍹', silver:'Rocket 🚀', gold:'Gold 🥇', diamond:'Gold 🥇' }[name];
+  state.planLabel = (CONFIG.planos[name] && CONFIG.planos[name].nome) || { bronze:'Plano Caipirinhas', silver:'Plano Rocket', gold:'Plano Gold', diamond:'Plano Gold' }[name] || name;
 
   if (!state.guests) {
     showFieldError('plan-error-anchor', 'Selecione o número de convidados para continuar.');
@@ -2965,7 +2960,7 @@ function renderSummary() {
     : 0;
   const totalComTaxa = state.totalValue + taxaDesloc + totalAdic;
   document.getElementById('total-value').textContent = 'R$ ' + fmt(totalComTaxa);
-  const noteBase = 'Plano ' + (state.planLabel||'') + ' · ' + (state.guestsLabel||'');
+  const noteBase = (state.planLabel||'') + ' · ' + (state.guestsLabel||'');
   var noteParts = [noteBase];
   if (taxaDesloc > 0) noteParts.push('R$ ' + fmt(taxaDesloc) + ' deslocamento');
   if (totalAdic > 0) noteParts.push('R$ ' + fmt(totalAdic) + ' adicionais');
