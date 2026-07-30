@@ -1384,11 +1384,57 @@ function togD(id){
   b.classList.toggle('open',!o);h.classList.toggle('open',!o);t.classList.toggle('open',!o);
 }
 
+// ── NORMALIZAÇÃO DA FOTO DE DRINK ────────────
+// As fotos de drink do orçamento são 300x300, com o drink recortado ocupando
+// toda a altura e as laterais transparentes — a "tarja preta" que aparece na
+// lista é o fundo #111 do card passando pela transparência, não parte da foto.
+// Foto enviada crua (ex.: 2758x4131) fica diferente porque o object-fit:cover
+// do layout corta topo e base para preencher o quadrado.
+// Então toda foto nova entra no mesmo molde: encaixada inteira (contain) num
+// quadrado de 300x300, com a sobra transparente.
+// De quebra, ~4 MB por foto viram ~30 KB.
+const DRINK_FOTO_CANVAS=300;
+
+function _normalizarFotoDrink(dataUrl){
+  return new Promise(function(resolve){
+    try{
+      const img=new Image();
+      img.onload=function(){
+        try{
+          const L=DRINK_FOTO_CANVAS;
+          // Encaixa a foto INTEIRA no quadrado (contain), centralizada.
+          // NÃO recortar a margem transparente do PNG: é ela que preserva a
+          // escala relativa entre os drinks. No estúdio todos são fotografados
+          // no mesmo enquadramento, então um copo baixo ocupa ~49% da altura e
+          // uma taça alta ~80% — igual às fotos antigas. Recortar a margem
+          // faria todo drink preencher 100% e inflaria os copos baixos.
+          const esc=Math.min(L/img.width,L/img.height);
+          const w=Math.max(1,Math.round(img.width*esc)),h=Math.max(1,Math.round(img.height*esc));
+          const cv=document.createElement('canvas');cv.width=L;cv.height=L;
+          const ctx=cv.getContext('2d');
+          ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+          ctx.drawImage(img,Math.round((L-w)/2),Math.round((L-h)/2),w,h);
+          // PNG quando há transparência (recorte do drink ou sobra do encaixe) —
+          // é ela que deixa o fundo do card aparecer. Só quadrada e opaca vira JPEG.
+          let temAlpha=false;
+          try{
+            const d2=ctx.getImageData(0,0,L,L).data;
+            for(let i=3;i<d2.length;i+=4){if(d2[i]<250){temAlpha=true;break;}}
+          }catch(e){temAlpha=true;} // canvas "sujo" por algum motivo: preserva alpha
+          resolve(temAlpha?cv.toDataURL('image/png'):cv.toDataURL('image/jpeg',0.9));
+        }catch(e){resolve(dataUrl);} // qualquer falha: mantém a foto original
+      };
+      img.onerror=function(){resolve(dataUrl);};
+      img.src=dataUrl;
+    }catch(e){resolve(dataUrl);}
+  });
+}
+
 function handleDrinkPhoto(inp,id){
   if(!inp.files||!inp.files[0])return;
   const r=new FileReader();
-  r.onload=e=>{
-    const url=e.target.result;
+  r.onload=async e=>{
+    const url=await _normalizarFotoDrink(e.target.result);
     pendingPhotos[id]=url;
     if(cfg.drinks[id]) cfg.drinks[id].foto=url;
     // thumb update
@@ -2302,9 +2348,12 @@ async function doPublicar(){
 
     // Nota: o timestamp é incluído no NOME do arquivo (images/bar-0-TS.jpg)
     // Isso garante que cada publish cria um path novo no CDN — sem stale cache
+    // A extensão segue o tipo real: fotos de drink recortadas são PNG (mantêm a
+    // transparência que o layout usa para a tarja lateral)
+    function _ext(dataUrl){return /^data:image\/png/i.test(dataUrl||'')?'png':'jpg';}
     (ov.barSlides||[]).forEach(function(src,i){
       if(src&&src.startsWith('data:')){
-        const b64=src.split(',')[1];const p=`images/bar-${i}-${ts}.jpg`;
+        const b64=src.split(',')[1];const p=`images/bar-${i}-${ts}.${_ext(src)}`;
         blobTasks.push(createBlob(b64).then(function(bl){
           treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});
           ov.barSlides[i]=`https://rocketdrinks.com.br/${p}`;imgCount++;
@@ -2313,7 +2362,7 @@ async function doPublicar(){
     });
     (ov.adicSlides||[]).forEach(function(src,i){
       if(src&&src.startsWith('data:')){
-        const b64=src.split(',')[1];const p=`images/adicional-${i}-${ts}.jpg`;
+        const b64=src.split(',')[1];const p=`images/adicional-${i}-${ts}.${_ext(src)}`;
         blobTasks.push(createBlob(b64).then(function(bl){
           treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});
           ov.adicSlides[i]=`https://rocketdrinks.com.br/${p}`;imgCount++;
@@ -2323,7 +2372,7 @@ async function doPublicar(){
     if(ov.drinks){
       Object.keys(ov.drinks).forEach(function(id){
         if(ov.drinks[id]&&ov.drinks[id].foto&&ov.drinks[id].foto.startsWith('data:')){
-          const b64=ov.drinks[id].foto.split(',')[1];const p=`images/drink-${id}-${ts}.jpg`;
+          const b64=ov.drinks[id].foto.split(',')[1];const p=`images/drink-${id}-${ts}.${_ext(ov.drinks[id].foto)}`;
           blobTasks.push(createBlob(b64).then(function(bl){
             treeEntries.push({path:p,mode:'100644',type:'blob',sha:bl.sha});
             ov.drinks[id].foto=`https://rocketdrinks.com.br/${p}`;imgCount++;
