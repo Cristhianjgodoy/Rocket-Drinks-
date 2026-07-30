@@ -963,7 +963,15 @@ function loadAll(){
     if(stored.planos&&stored.planos[p]) Object.assign(cfg.planos[p],stored.planos[p]);
   });
   if(stored.drinks) Object.keys(stored.drinks).forEach(id=>{
-    if(cfg.drinks[id]) Object.assign(cfg.drinks[id],stored.drinks[id]);
+    // Drinks criados no admin não existem no DEF — precisam ser recriados aqui,
+    // senão desaparecem do painel a cada recarga da página
+    if(!cfg.drinks[id]) cfg.drinks[id]={nome:'',desc:'',foto:null,cat:'s'};
+    Object.assign(cfg.drinks[id],stored.drinks[id]);
+  });
+  // Grupos: preserva a divisão por plano (inclui drinks novos e reordenações)
+  if(stored.grupos) ['bronze','silver','gold'].forEach(function(pk){
+    const sg=stored.grupos[pk];
+    if(sg&&Array.isArray(sg.ids)&&cfg.grupos[pk]) cfg.grupos[pk].ids=sg.ids.slice();
   });
   if(stored.barSlides) cfg.barSlides=stored.barSlides;
   if(stored.barModels) cfg.barModels=stored.barModels;
@@ -1129,14 +1137,15 @@ async function _checkPublishedChanges(){
     const avisoDiff=(pub.barAviso||'')!==(local.barAviso||'');
     const adicItemsDiff=JSON.stringify(pub.adicItems||[])!==JSON.stringify(local.adicItems||[]);
     const equipeDiff=JSON.stringify(pub.equipe||[])!==JSON.stringify(local.equipe||[]);
+    const gruposDiff=!!pub.grupos&&JSON.stringify(pub.grupos)!==JSON.stringify(local.grupos||{});
 
-    if(barDiff||adicDiff||modelsDiff||planoDiff||drinksDiff||avisoDiff||adicItemsDiff||equipeDiff){
+    if(barDiff||adicDiff||modelsDiff||planoDiff||drinksDiff||avisoDiff||adicItemsDiff||equipeDiff||gruposDiff){
       _pendingSyncData=pub;
       const partes=[];
       if(barDiff||adicDiff)partes.push('fotos');
       if(modelsDiff)partes.push('modelos de bar');
       if(planoDiff)partes.push('planos');
-      if(drinksDiff)partes.push('drinks');
+      if(drinksDiff||gruposDiff)partes.push('drinks');
       if(avisoDiff||adicItemsDiff||equipeDiff)partes.push('configurações');
       const el=document.getElementById('sync-notice');
       const msg=document.getElementById('sync-notice-msg');
@@ -1970,6 +1979,15 @@ async function save(silentLocal){
       ov.drinks[id]=entry;
     });
 
+    // Grupos (a que plano cada drink pertence) — sem isso o orçamento não sabe
+    // onde exibir drinks novos, e a ordem/remanejamento não sai do navegador
+    ov.grupos={};
+    ['bronze','silver','gold'].forEach(function(pk){
+      const g=cfg.grupos&&cfg.grupos[pk];
+      if(!g)return;
+      ov.grupos[pk]={emoji:g.emoji,label:g.label,ids:(g.ids||[]).slice()};
+    });
+
     // Bar models
     cfg.barModels.forEach((_,i)=>{
       const eEl=document.getElementById('emoji-btn-'+i);
@@ -2068,7 +2086,10 @@ async function save(silentLocal){
 
     // 2. Salva rascunho no GitHub (persistente em qualquer dispositivo)
     const token=getGhToken();
-    if(!token){
+    if(_rkdPublishing){
+      // Publicação em andamento: não toca na main agora (evita corrida)
+      toast('✓ Salvo! O rascunho sincroniza após a publicação terminar.','var(--gold)');
+    }else if(!token){
       toast('✓ Salvo! Configure o token para sincronizar entre dispositivos.','var(--gold)');
     }else{
       btn.textContent='⏳ Sincronizando...';
@@ -2083,10 +2104,44 @@ async function save(silentLocal){
   if(!silentLocal){btn.disabled=false;btn.innerHTML='💾 Salvar Alterações';}
 }
 
+// ── COMMIT SEGURO (anti-corrida de force-push) ───────────
+// Antes, publish e rascunho liam o ref/base_tree no início e terminavam com
+// force:true. Quando os dois se cruzavam, o último sobrescrevia o outro em
+// silêncio — foi assim que 9 fotos de drinks já publicadas desapareceram
+// (29/07/2026: o rascunho apagou o commit da publicação e o config ficou
+// apontando para arquivos inexistentes).
+// Agora: push fast-forward (force:false). Se o ref mudou no meio do caminho,
+// refazemos a árvore sobre o novo head e tentamos de novo — o trabalho do
+// outro lado é preservado em vez de destruído.
+var _rkdPublishing=false;
+
+async function ghCommitPush(ghAPI,GH_BASE,treeEntries,message){
+  var lastErr=null;
+  for(var tentativa=0;tentativa<5;tentativa++){
+    const ref=await ghAPI('GET',`${GH_BASE}/git/ref/heads/main`);
+    const headCommit=await ghAPI('GET',`${GH_BASE}/git/commits/${ref.object.sha}`);
+    const newTree=await ghAPI('POST',`${GH_BASE}/git/trees`,{base_tree:headCommit.tree.sha,tree:treeEntries});
+    const newCommit=await ghAPI('POST',`${GH_BASE}/git/commits`,{message:message,tree:newTree.sha,parents:[ref.object.sha]});
+    try{
+      await ghAPI('PATCH',`${GH_BASE}/git/refs/heads/main`,{sha:newCommit.sha,force:false});
+      return newCommit;
+    }catch(e){
+      lastErr=e;
+      // Só repete quando o ref avançou (outra aba/dispositivo escreveu antes).
+      // Erro de permissão, rede ou rate limit sobe direto, sem insistir.
+      if(!/fast.?forward|not a fast|reference|conflict|422|409/i.test(e.message||''))throw e;
+      await new Promise(function(r){setTimeout(r,700+tentativa*500);});
+    }
+  }
+  throw new Error('O repositório foi alterado por outra aba/dispositivo durante o envio. Nada foi sobrescrito — tente novamente. ('+((lastErr&&lastErr.message)||'')+')');
+}
+
 // ── RASCUNHO GITHUB ──────────────────────────
 // Salva apenas texto + URLs já publicadas (sem base64 inline).
 // Base64 fica só no localStorage até o Publicar processar as imagens.
 async function saveDraftToGithub(ov,token){
+  // Nunca mexe na main enquanto uma publicação está em andamento
+  if(_rkdPublishing)return;
   const GH_BASE=`https://api.github.com/repos/${GH_REPO_OWNER}/${GH_REPO_NAME}`;
   const ghHdrs={'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
   async function ghAPI(method,url,body){
@@ -2106,11 +2161,7 @@ async function saveDraftToGithub(ov,token){
   const cfgBlob=await createBlob(configBase64);
   const treeEntries=[{path:'rocket-config-draft.json',mode:'100644',type:'blob',sha:cfgBlob.sha}];
 
-  const ref=await ghAPI('GET',`${GH_BASE}/git/ref/heads/main`);
-  const headCommit=await ghAPI('GET',`${GH_BASE}/git/commits/${ref.object.sha}`);
-  const newTree=await ghAPI('POST',`${GH_BASE}/git/trees`,{base_tree:headCommit.tree.sha,tree:treeEntries});
-  const newCommit=await ghAPI('POST',`${GH_BASE}/git/commits`,{message:'Rascunho via admin',tree:newTree.sha,parents:[ref.object.sha]});
-  await ghAPI('PATCH',`${GH_BASE}/git/refs/heads/main`,{sha:newCommit.sha,force:true});
+  await ghCommitPush(ghAPI,GH_BASE,treeEntries,'Rascunho via admin');
 }
 
 // ── PUBLICAR NO SITE ─────────────────────────
@@ -2161,6 +2212,8 @@ async function doPublicar(){
   const token=getGhToken();
   if(!token){openGhTokenModal();return;}
   const pb=document.getElementById('pbtn');
+  if(_rkdPublishing){toast('⏳ Já existe uma publicação em andamento.','var(--gold)',4000);return;}
+  _rkdPublishing=true; // bloqueia rascunho automático até terminar
   pb.disabled=true;pb.textContent='⏳ Verificando token...';
   hidePubResult();
   try{
@@ -2290,15 +2343,8 @@ async function doPublicar(){
     const configBase64=btoa(unescape(encodeURIComponent(configStr)));
     const cfgBlob=await createBlob(configBase64);
     treeEntries.push({path:'rocket-config.json',mode:'100644',type:'blob',sha:cfgBlob.sha});
-    pb.textContent='⏳ Lendo ref do repositório...';
-    const ref=await ghAPI('GET',`${GH_BASE}/git/ref/heads/main`);
-    const headCommit=await ghAPI('GET',`${GH_BASE}/git/commits/${ref.object.sha}`);
-    pb.textContent='⏳ Criando árvore de arquivos...';
-    const newTree=await ghAPI('POST',`${GH_BASE}/git/trees`,{base_tree:headCommit.tree.sha,tree:treeEntries});
     pb.textContent='⏳ Criando commit...';
-    const newCommit=await ghAPI('POST',`${GH_BASE}/git/commits`,{message:'Config e fotos via admin',tree:newTree.sha,parents:[ref.object.sha]});
-    pb.textContent='⏳ Atualizando branch main...';
-    await ghAPI('PATCH',`${GH_BASE}/git/refs/heads/main`,{sha:newCommit.sha,force:true});
+    await ghCommitPush(ghAPI,GH_BASE,treeEntries,'Config e fotos via admin');
 
     // 4. Atualiza localStorage e sincroniza cfg em memória (evita re-upload na próxima edição)
     localStorage.setItem(SK,configStr);
@@ -2328,6 +2374,9 @@ async function doPublicar(){
       friendlyMsg='Sem conexão com internet. Verifique e tente novamente.';
     toast('⚠ '+friendlyMsg,'var(--danger)',9000);
     showPubResult('❌ Publicação falhou: '+friendlyMsg,'var(--danger)');
+  }finally{
+    // Libera o rascunho automático, inclusive nos returns antecipados do try
+    _rkdPublishing=false;
   }
   if(pb){pb.disabled=false;pb.textContent='🚀 Publicar no Site';}
 }

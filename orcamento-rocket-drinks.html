@@ -2127,13 +2127,31 @@ window._applyAdminCfg = function(cfgOverride) {
     if (ov.drinks) {
       const _all = CONFIG.drinks_simples.concat(CONFIG.drinks_prime, CONFIG.drinks_diamond);
       Object.keys(ov.drinks).forEach(id => {
-        const drink = _all.find(d => d.id === id);
-        if (drink) {
-          const od = ov.drinks[id];
-          if (od.nome !== undefined) drink.nome = od.nome;
-          if (od.desc !== undefined) drink.desc = od.desc;
-          if (od.foto !== undefined) drink.foto = od.foto;
+        const od = ov.drinks[id];
+        if (!od) return;
+        let drink = _all.find(d => d.id === id);
+        if (!drink) {
+          // Drink criado no admin (id custom_*): não existe no HTML, cria agora.
+          // Sem isto, drinks novos nunca apareciam no orçamento.
+          drink = { id: id, nome: '', desc: '', foto: null };
+          CONFIG.drinks_simples.push(drink);
+          _all.push(drink);
         }
+        if (od.nome !== undefined) drink.nome = od.nome;
+        if (od.desc !== undefined) drink.desc = od.desc;
+        if (od.foto !== undefined) drink.foto = od.foto;
+      });
+    }
+
+    // ── Grupos: quais drinks aparecem em cada plano ──
+    // O admin envia por plano (bronze/silver/gold); aqui os grupos são 1/2/3.
+    if (ov.grupos) {
+      const _mapaGrupo = { bronze: 1, silver: 2, gold: 3 };
+      Object.keys(ov.grupos).forEach(pk => {
+        const g = ov.grupos[pk];
+        const n = _mapaGrupo[pk];
+        if (!n || !g || !Array.isArray(g.ids) || !CONFIG.grupos[n]) return;
+        CONFIG.grupos[n].ids = g.ids.slice();
       });
     }
 
@@ -2200,14 +2218,25 @@ window._applyAdminCfg = function(cfgOverride) {
       CONFIG.adicionais.items = ov.adicItems;
     }
     // Re-renderiza a lista de adicionais se já estiver visível (step 7 com "Sim" selecionado)
-    if (typeof state !== 'undefined' && state.adicionaisInteresse === 'sim') {
-      try { if (typeof buildAdicionais === 'function') buildAdicionais(); } catch(e) {}
-    }
+    // try próprio: na primeira chamada `state` ainda não existe (TDZ) e o throw
+    // interrompia o resto do apply — a equipe abaixo ficava sem aplicar
+    try {
+      if (state.adicionaisInteresse === 'sim' && typeof buildAdicionais === 'function') buildAdicionais();
+    } catch(e) {}
 
     // ── Equipe por faixa ──
     if (ov.equipe && Array.isArray(ov.equipe) && ov.equipe.length > 0) {
       CONFIG.equipeRanges = ov.equipe.slice().sort((a, b) => a.max - b.max);
     }
+
+    // ── Re-renderiza os drinks se o cliente já estiver no step 4 ──
+    // Mantém as seleções (state.selectedDrinks) e traz drinks/fotos/grupos novos
+    try {
+      if (state.grupo && typeof buildDrinks === 'function') {
+        buildDrinks();
+        if (typeof refreshDrinkItems === 'function') refreshDrinkItems();
+      }
+    } catch(e) {}
 
   } catch(e) {
     console.warn('Admin config override failed:', e);
