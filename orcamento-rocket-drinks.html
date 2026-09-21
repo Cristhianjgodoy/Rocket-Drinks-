@@ -3301,7 +3301,9 @@ function renderClosing() {
 //  WHATSAPP
 // =========================================================
 function enviarWhatsApp() {
-  if(!Object.isFrozen(CONFIG)){location.reload();return;}
+  // Nota: checagem de Object.isFrozen(CONFIG) removida — o CONFIG deixou de ser
+  // congelado (o admin precisa sobrescrevê-lo), então ela recarregava a página
+  // e jogava o cliente de volta ao início do orçamento.
   const _allDrinks = CONFIG.drinks_simples.concat(CONFIG.drinks_prime, CONFIG.drinks_diamond);
   const drinks_all = state.selectedDrinks.map(id => _allDrinks.find(d=>d.id===id)?.nome).filter(Boolean).join(', ') || '—';
 
